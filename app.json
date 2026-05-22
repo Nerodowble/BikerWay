@@ -1,0 +1,74 @@
+{
+  "expo": {
+    "name": "BikerWay",
+    "slug": "bikerway",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#121212"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bikerway.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "BikerWay precisa da localização para calcular rotas, autonomia de combustível e mostrar postos próximos.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "BikerWay precisa da localização em segundo plano para manter o hodômetro de combustível ativo durante a viagem, mesmo com a tela apagada.",
+        "NSMicrophoneUsageDescription": "BikerWay precisa do microfone para falar com outros motociclistas do seu comboio via voz.",
+        "UIBackgroundModes": [
+          "location",
+          "audio"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.bikerway.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#121212"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "BikerWay precisa da sua localização (mesmo em segundo plano) para navegar e gerenciar autonomia de combustível em tempo real.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      "expo-audio"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "83979ddc-13ee-4846-b9be-58531440d2f2"
+      }
+    }
+  }
+}

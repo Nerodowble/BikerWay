@@ -1,0 +1,320 @@
+[
+  {
+    "rota_id": "serra-do-rio-do-rastro-sc",
+    "nome_rota": "Serra do Rio do Rastro (SC-390)",
+    "estado_pais": "SC, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Lauro Müller",
+      "latitude": -28.388889,
+      "longitude": -49.395833
+    },
+    "coordenada_fim": {
+      "cidade": "Bom Jardim da Serra",
+      "latitude": -28.339722,
+      "longitude": -49.625833
+    },
+    "distancia_total_km": 32,
+    "total_pedagios_moto_reais": 0.00,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 25
+    },
+    "interconexoes_ids": ["serra-do-corvo-branco-sc", "br-101-sc"],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "mirante",
+        "nome": "Mirante da Serra do Rio do Rastro",
+        "latitude": -28.391944,
+        "longitude": -49.560278,
+        "descricao_biker": "Mirante icônico no topo da serra com vista panorâmica das curvas em S, ponto de parada obrigatório com estacionamento amplo para motos."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Lauro Müller (entrada da serra)",
+        "latitude": -28.391667,
+        "longitude": -49.398889,
+        "descricao_biker": "Último posto antes da subida da serra, fundamental abastecer pois não há postos no trecho serrano."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante do Alemão (Bom Jardim da Serra)",
+        "latitude": -28.342222,
+        "longitude": -49.628333,
+        "descricao_biker": "Tradicional entre motociclistas, refeições quentes e local de encontro pós-descida da serra."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante Curva do S",
+        "latitude": -28.385000,
+        "longitude": -49.530000,
+        "descricao_biker": "Vista da famosa Curva do S, paisagem panorâmica e parada rápida para fotos."
+      }
+    ],
+    "polilinha_simplificada": [
+      {"lat": -28.388889, "lng": -49.395833},
+      {"lat": -28.391944, "lng": -49.460000},
+      {"lat": -28.391944, "lng": -49.560278},
+      {"lat": -28.370000, "lng": -49.600000},
+      {"lat": -28.339722, "lng": -49.625833}
+    ]
+  },
+  {
+    "rota_id": "estrada-dos-romeiros-sp",
+    "nome_rota": "Estrada dos Romeiros (SP-312)",
+    "estado_pais": "SP, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Santana de Parnaíba",
+      "latitude": -23.443889,
+      "longitude": -46.917778
+    },
+    "coordenada_fim": {
+      "cidade": "Itu",
+      "latitude": -23.264167,
+      "longitude": -47.299167
+    },
+    "distancia_total_km": 55,
+    "total_pedagios_moto_reais": 0.00,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "medio",
+      "trecho_critico_sem_posto_km": 15
+    },
+    "interconexoes_ids": ["rodovia-castello-branco-sp", "rodovia-marechal-rondon-sp"],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Graal Pirapora",
+        "latitude": -23.395833,
+        "longitude": -46.997222,
+        "descricao_biker": "Conveniência 24h, área coberta para motos e banheiros limpos, ponto de encontro de grupos."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Santuário Nossa Senhora do Ó (Pirapora do Bom Jesus)",
+        "latitude": -23.394167,
+        "longitude": -46.999722,
+        "descricao_biker": "Ponto histórico-religioso à beira do Rio Tietê, parada cultural na rota dos romeiros."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Empório da Estrada (Cabreúva)",
+        "latitude": -23.307500,
+        "longitude": -47.131389,
+        "descricao_biker": "Café colonial e refeições, estacionamento seguro e movimento intenso de motociclistas aos fins de semana."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Shell Cabreúva",
+        "latitude": -23.310278,
+        "longitude": -47.135000,
+        "descricao_biker": "Último posto antes do trecho final até Itu, com loja de conveniência e área de descanso."
+      }
+    ],
+    "polilinha_simplificada": [
+      {"lat": -23.443889, "lng": -46.917778},
+      {"lat": -23.410000, "lng": -46.975000},
+      {"lat": -23.395833, "lng": -46.999722},
+      {"lat": -23.335000, "lng": -47.100000},
+      {"lat": -23.310278, "lng": -47.135000},
+      {"lat": -23.264167, "lng": -47.299167}
+    ]
+  },
+  {
+    "rota_id": "rota-do-sol-rn",
+    "nome_rota": "Rota do Sol (RN-063)",
+    "estado_pais": "RN, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Natal (Ponta Negra)",
+      "latitude": -5.880556,
+      "longitude": -35.180000
+    },
+    "coordenada_fim": {
+      "cidade": "Tibau do Sul (Praia da Pipa)",
+      "latitude": -6.227778,
+      "longitude": -35.054722
+    },
+    "distancia_total_km": 85,
+    "total_pedagios_moto_reais": 0.00,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "baixo",
+      "trecho_critico_sem_posto_km": 20
+    },
+    "interconexoes_ids": ["br-101-rn", "litoral-sul-rn"],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "restaurante",
+        "nome": "Barraca Camarões (Praia de Búzios)",
+        "latitude": -6.005556,
+        "longitude": -35.108333,
+        "descricao_biker": "Parada gastronômica à beira-mar com estacionamento para motos e vista do litoral."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Ipiranga Pirangi do Norte",
+        "latitude": -5.973889,
+        "longitude": -35.115278,
+        "descricao_biker": "Posto bem estruturado no início da rota, conveniência e ar comprimido disponível."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante dos Golfinhos (Praia da Pipa)",
+        "latitude": -6.231944,
+        "longitude": -35.046944,
+        "descricao_biker": "Mirante natural com vista das falésias, parada fotográfica ao final da rota."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Cravo & Canela (Tibau do Sul)",
+        "latitude": -6.184167,
+        "longitude": -35.085000,
+        "descricao_biker": "Boa refeição com estacionamento e ambiente acolhedor para grupos de motociclistas."
+      }
+    ],
+    "polilinha_simplificada": [
+      {"lat": -5.880556, "lng": -35.180000},
+      {"lat": -5.973889, "lng": -35.115278},
+      {"lat": -6.005556, "lng": -35.108333},
+      {"lat": -6.120000, "lng": -35.090000},
+      {"lat": -6.184167, "lng": -35.085000},
+      {"lat": -6.227778, "lng": -35.054722}
+    ]
+  },
+  {
+    "rota_id": "estrada-real-caminho-velho-mg-sp-rj",
+    "nome_rota": "Estrada Real - Caminho Velho",
+    "estado_pais": "MG/SP/RJ, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Ouro Preto",
+      "latitude": -20.385833,
+      "longitude": -43.503611
+    },
+    "coordenada_fim": {
+      "cidade": "Paraty",
+      "latitude": -23.220278,
+      "longitude": -44.713056
+    },
+    "distancia_total_km": 710,
+    "total_pedagios_moto_reais": 0.00,
+    "caracteristicas": {
+      "tipo_pavimento": "misto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 45
+    },
+    "interconexoes_ids": ["serra-da-mantiqueira-mg", "rodovia-rio-santos-rj", "br-040-mg"],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "mirante",
+        "nome": "Mirante Morro São Sebastião (Ouro Preto)",
+        "latitude": -20.382500,
+        "longitude": -43.510833,
+        "descricao_biker": "Vista panorâmica do conjunto histórico, parada inicial estratégica para fotos."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Casa do Ouvidor (Tiradentes)",
+        "latitude": -21.110556,
+        "longitude": -44.173611,
+        "descricao_biker": "Comida mineira tradicional, estacionamento próximo e parada clássica no Caminho Velho."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto BR São João del-Rei",
+        "latitude": -21.135833,
+        "longitude": -44.260833,
+        "descricao_biker": "Ponto estratégico de reabastecimento entre Tiradentes e o trecho serrano da Mantiqueira."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante do Pico do Itapeva (Campos do Jordão)",
+        "latitude": -22.704722,
+        "longitude": -45.527778,
+        "descricao_biker": "Ponto alto da Mantiqueira com vista do Vale do Paraíba, parada cênica obrigatória."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Banana da Terra (Paraty)",
+        "latitude": -23.218333,
+        "longitude": -44.715000,
+        "descricao_biker": "Boa parada gastronômica ao final do Caminho Velho, com estrutura para grupos."
+      }
+    ],
+    "polilinha_simplificada": [
+      {"lat": -20.385833, "lng": -43.503611},
+      {"lat": -21.110556, "lng": -44.173611},
+      {"lat": -21.135833, "lng": -44.260833},
+      {"lat": -22.704722, "lng": -45.527778},
+      {"lat": -22.940000, "lng": -45.300000},
+      {"lat": -23.220278, "lng": -44.713056}
+    ]
+  },
+  {
+    "rota_id": "rota-romantica-rs",
+    "nome_rota": "Rota Romântica (RS-235)",
+    "estado_pais": "RS, Brasil",
+    "coordenada_inicio": {
+      "cidade": "São Leopoldo",
+      "latitude": -29.760278,
+      "longitude": -51.147222
+    },
+    "coordenada_fim": {
+      "cidade": "São Francisco de Paula",
+      "latitude": -29.448333,
+      "longitude": -50.583611
+    },
+    "distancia_total_km": 184,
+    "total_pedagios_moto_reais": 0.00,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "medio",
+      "trecho_critico_sem_posto_km": 18
+    },
+    "interconexoes_ids": ["rota-do-sol-rs", "serra-gaucha-rs"],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "restaurante",
+        "nome": "Café Colonial Bela Vista (Gramado)",
+        "latitude": -29.379722,
+        "longitude": -50.876111,
+        "descricao_biker": "Café colonial farto, estacionamento amplo e parada clássica para grupos de motociclistas na serra."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante Vale do Quilombo (Gramado)",
+        "latitude": -29.355833,
+        "longitude": -50.890278,
+        "descricao_biker": "Vista panorâmica do Vale do Quilombo, parada cênica gratuita com estacionamento."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Ipiranga Nova Petrópolis",
+        "latitude": -29.376111,
+        "longitude": -51.116389,
+        "descricao_biker": "Posto bem localizado no meio da rota, conveniência e área coberta para motos."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Cantina Pastasciutta (Canela)",
+        "latitude": -29.365278,
+        "longitude": -50.811944,
+        "descricao_biker": "Comida italiana farta, ambiente acolhedor e bom estacionamento para motos."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante Cascata do Caracol (Canela)",
+        "latitude": -29.290833,
+        "longitude": -50.798889,
+        "descricao_biker": "Vista da cascata de 131m, parque com estacionamento seguro e estrutura turística."
+      }
+    ],
+    "polilinha_simplificada": [
+      {"lat": -29.760278, "lng": -51.147222},
+      {"lat": -29.690000, "lng": -51.130000},
+      {"lat": -29.376111, "lng": -51.116389},
+      {"lat": -29.379722, "lng": -50.876111},
+      {"lat": -29.365278, "lng": -50.811944},
+      {"lat": -29.448333, "lng": -50.583611}
+    ]
+  }
+]

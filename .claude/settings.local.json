@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir C:\\\\Users\\\\willi\\\\Projeto_Teste_Indefinido *)",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(git *)",
+      "Bash(mkdir -p docs)",
+      "Bash(mv \"Arquitetura Tecnológica e Especificação de Design.md\" \"docs/01-arquitetura-tecnologica-e-design.md\")",
+      "Bash(mv \"Especificação de Requisitos do Sistema \\(SRS\\).md\" \"docs/02-especificacao-de-requisitos-srs.md\")",
+      "Bash(mv \"Guia de Desenvolvimento Passo a Passo \\(Roadmap para Claude Code\\).md\" \"docs/03-roadmap-desenvolvimento.md\")",
+      "Bash(npx --yes create-expo-app@latest . --template blank-typescript)",
+      "Bash(echo \"---EXITCODE:$?---\")",
+      "Bash(mv .claude_tmp .claude)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"---tsc_exit:$?---\")",
+      "Bash(npx jest *)",
+      "Bash(echo \"---jest_exit:$?---\")",
+      "Bash(npx expo *)",
+      "Bash(powershell -NoProfile -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Get-Process expo -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; Write-Output 'killed'\")",
+      "Bash(echo \"tsc_exit:$?\")",
+      "Bash(echo \"jest_exit:$?\")",
+      "Bash(curl -s 'https://nominatim.openstreetmap.org/search?q=Rua+Sitha+52+Inamar+Diadema+SP&format=jsonv2&limit=2&accept-language=pt-BR' -H 'User-Agent: BikerWay/0.1')",
+      "Bash(curl -s -X POST 'https://overpass-api.de/api/interpreter' --data-urlencode 'data=[out:json][timeout:25]; node[\"amenity\"=\"fuel\"]\\(-23.7509,-46.6467,-23.6789,-46.5667\\); out body;')",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s -X POST 'https://overpass-api.de/api/interpreter' -H 'User-Agent: BikerWayTest/0.1' -H 'Accept: application/json' --data-urlencode 'data=[out:json][timeout:25];node[\"amenity\"=\"fuel\"]\\(-23.7509,-46.6467,-23.6789,-46.5667\\);out body;')",
+      "Bash(curl -s -X POST 'https://overpass-api.de/api/interpreter' -H 'User-Agent: BikerWayTest/0.1' -H 'Accept: application/json' --data-urlencode 'data=[out:json][timeout:25];\\(node[\"amenity\"=\"fuel\"]\\(-23.7869,-46.6867,-23.6429,-46.5267\\);way[\"amenity\"=\"fuel\"]\\(-23.7869,-46.6867,-23.6429,-46.5267\\);\\);out center;')",
+      "Bash(grep *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; print\\('expo-audio:', deps.get\\('expo-audio','MISSING'\\)\\); print\\('expo-av:', deps.get\\('expo-av','MISSING'\\)\\)\")",
+      "Bash(curl -s 'https://nominatim.openstreetmap.org/search?q=Ilha+Comprida&format=jsonv2&limit=8&accept-language=pt-BR&countrycodes=br' -H 'User-Agent: BikerWayTest/0.1')",
+      "Bash(curl -s 'https://nominatim.openstreetmap.org/search?q=Ilha+Comprida&format=jsonv2&limit=8&accept-language=pt-BR&countrycodes=br&viewbox=-46.616,-23.715,-46.6,-22.715&bounded=1' -H 'User-Agent: BikerWayTest/0.1')",
+      "Bash(curl -s 'https://router.project-osrm.org/route/v1/driving/-46.6067,-23.7149;-47.5460,-24.7286?overview=full&geometries=polyline&steps=false&alternatives=true')",
+      "Bash(findstr *)",
+      "Bash(powershell *)",
+      "Bash(npx expo-doctor *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "claude-flow"
+  ]
+}

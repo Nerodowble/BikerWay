@@ -1,0 +1,14 @@
+{
+  "project": "BikerWay",
+  "stack": "Expo + React Native + TypeScript",
+  "rules": [
+    "Modular TypeScript with strict types and DDD bounded contexts",
+    "Keep files under 500 lines",
+    "Use Zustand stores per bounded context (motorcycle, navigation, fuel, poi)",
+    "Persistence via expo-sqlite",
+    "Maps: react-native-maps + OpenStreetMap tiles (Phase 2)",
+    "Routing: OSRM public API (Phase 2)",
+    "POI search: Overpass API (Phase 4)",
+    "Design: dark theme #121212, accent #FF6B00, min hit target 64dp, min nav font 18pt"
+  ]
+}
