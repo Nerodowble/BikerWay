@@ -6,6 +6,7 @@ import type {
   Confiabilidade,
   Dificuldade,
 } from '@/domains/catalog/types';
+import { deriveRouteTheme, getRouteThemeMeta } from '@/domains/catalog/theme';
 
 export interface RouteCardProps {
   match: CatalogRouteMatch;
@@ -142,6 +143,10 @@ export const RouteCard: React.FC<RouteCardProps> = ({
         }
       : null;
 
+  // F35.0.A — chip de tema derivado em runtime (nao altera schema). Sempre
+  // renderiza algum tema; o fallback do deriveRouteTheme garante.
+  const themeMeta = getRouteThemeMeta(deriveRouteTheme(route));
+
   // Prefer the OSRM-refined round-trip when available; otherwise keep the
   // haversine baseline so the card never blanks out while refinement is in
   // flight. `hasRealMetrics` is the single source of truth so the UI cannot
@@ -178,10 +183,19 @@ export const RouteCard: React.FC<RouteCardProps> = ({
       accessibilityLabel={a11ySummary}
       accessibilityHint="Toque para ver detalhes desta rota"
     >
-      <View style={styles.headerRow}>
-        <Text style={styles.title} numberOfLines={2}>
-          {route.nome_rota}
-        </Text>
+      <Text style={styles.title} numberOfLines={2}>
+        {route.nome_rota}
+      </Text>
+      {/* F35.0.A — Linha de tags: tema (sempre) + dificuldade (se curada).
+          Ficar abaixo do titulo deixa a hierarquia clara: nome -> qualifiers
+          -> meta. Em portrait estreito, pills quebram numa segunda linha via
+          flexWrap em vez de comprimir o titulo. */}
+      <View style={styles.tagsRow} testID={`${testID}-tags`}>
+        <MetaPill
+          label={themeMeta.label}
+          pillColors={{ bg: themeMeta.bg, fg: themeMeta.fg }}
+          testID={`${testID}-pill-theme`}
+        />
         {dificuldadePill !== null ? (
           <MetaPill
             label={dificuldadePill.label}
@@ -290,6 +304,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
   },
   title: {
     color: colors.textPrimary,

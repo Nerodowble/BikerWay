@@ -275,6 +275,25 @@ export function createOverpassClient(
     opts.cacheCapacity ?? DEFAULT_CACHE_CAPACITY,
   );
 
+  // F36.4 — Cache write-through em SQLite. Carregado lazy na primeira
+  // chamada; degrada graceful em testes sem SQLite.
+  type DiskRepo = import('../db/poiCacheRepository').PoiCacheRepository;
+  let diskRepo: DiskRepo | null = null;
+  let diskInitTried = false;
+  async function getDiskCache(): Promise<DiskRepo | null> {
+    if (diskInitTried) return diskRepo;
+    diskInitTried = true;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const m =
+        require('../db/poiCacheRepository') as typeof import('../db/poiCacheRepository');
+      diskRepo = await m.getPoiCacheRepo();
+    } catch {
+      diskRepo = null;
+    }
+    return diskRepo;
+  }
+
   async function fetchPoisInBox(
     bbox: BoundingBox,
     category: PoiCategory,
@@ -282,6 +301,20 @@ export function createOverpassClient(
     const cacheKey = buildCacheKey(bbox, category);
     const cached = cache.get(cacheKey);
     if (cached) return cloneList(cached);
+
+    // F36.4 — SQLite cache antes do network. Cobre kill-do-app + offline.
+    const disk = await getDiskCache();
+    if (disk !== null) {
+      try {
+        const fromDisk = await disk.get(cacheKey);
+        if (fromDisk !== null) {
+          cache.set(cacheKey, fromDisk);
+          return cloneList(fromDisk);
+        }
+      } catch {
+        // best-effort
+      }
+    }
 
     // Throttle: keep at least `minIntervalMs` between consecutive calls.
     const now = Date.now();
@@ -308,6 +341,15 @@ export function createOverpassClient(
       });
       await assertOk(response);
     } catch (err) {
+      // F36.4 — Network failure: tenta o disco uma vez mais (caso outra
+      // instancia/sessao tenha populado). Senao, propaga erro original.
+      if (disk !== null) {
+        const fromDisk = await disk.get(cacheKey).catch(() => null);
+        if (fromDisk !== null) {
+          cache.set(cacheKey, fromDisk);
+          return cloneList(fromDisk);
+        }
+      }
       // Preserve the original HttpError as `cause` so the UI/diagnostics
       // layer can still inspect the status code and body snippet, while
       // giving callers a user-facing Portuguese message consistent with
@@ -343,6 +385,11 @@ export function createOverpassClient(
     }
 
     cache.set(cacheKey, out);
+    // F36.4 — Write-through pro SQLite (fire-and-forget). Cache nao
+    // bloqueia o caller.
+    if (disk !== null) {
+      void disk.set(cacheKey, out).catch(() => undefined);
+    }
     return cloneList(out);
   }
 

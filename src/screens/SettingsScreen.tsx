@@ -70,6 +70,11 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     navigation.navigate('SOS');
   };
 
+  const handleOpenPassport = (): void => {
+    // Passaporte e somente leitura — nao precisa de movement lock.
+    navigation.navigate('Passport');
+  };
+
   const riderStatusLine: string = profile
     ? cityState
       ? `${profile.displayName} · ${cityState}`
@@ -209,6 +214,24 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               motorcycleCount === 0 ? 'Cadastrar moto' : 'Adicionar nova moto'
             }
             testID="btn-settings-motorcycles"
+          />
+        </View>
+      </View>
+
+      <View style={styles.section} testID="settings-section-passport">
+        <Text style={styles.sectionEyebrow}>MEU PASSAPORTE</Text>
+        <Text style={styles.statusLine}>
+          Veja suas rotas conquistadas, distancia total rodada e conquistas
+          desbloqueadas. Tudo guardado localmente, sem nuvem.
+        </Text>
+        <View style={styles.actionRow}>
+          <BigButton
+            label="ABRIR PASSAPORTE"
+            variant="secondary"
+            fullWidth
+            onPress={handleOpenPassport}
+            accessibilityLabel="Abrir passaporte com rotas conquistadas e conquistas"
+            testID="btn-settings-passport"
           />
         </View>
       </View>

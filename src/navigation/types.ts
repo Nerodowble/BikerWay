@@ -21,4 +21,13 @@ export type RootStackParamList = {
   // ganha um param opcional pra abrir direto na tela "alerta recebido"
   // quando um SOS chega de outro piloto via PeerJS.
   SOS: undefined;
+  // F35.3 — Passaporte do piloto. Lista rotas completadas, badges,
+  // progresso por estado. Sem params: o screen carrega do passportStore.
+  Passport: undefined;
+  // F35.6 — Trips multi-dia auto-geradas a partir do grafo de
+  // interconexoes. Sem params: tela le do tripsStore.
+  Trips: undefined;
+  // F35.7 — Builder manual de trips. `editTripId` opcional pra editar
+  // uma saved_trip existente; ausente = criar nova.
+  TripBuilder: { editTripId?: number } | undefined;
 };

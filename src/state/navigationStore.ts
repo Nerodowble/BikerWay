@@ -10,6 +10,7 @@ import { computeReserveStatus } from '../domains/fuel/autonomy';
 import { findNearestPointOnRoute } from '../domains/navigation/engine';
 import { haversineMeters } from '../shared/utils/haversine';
 import { openDatabase } from '../infrastructure/db/sqlite';
+import { getActiveRouteRepo } from '../infrastructure/db/activeRouteRepository';
 import { osrmClient } from '../infrastructure/routing/osrmClient';
 import {
   selectActiveMotorcycle,
@@ -70,6 +71,10 @@ export interface NavigationStoreState extends NavigationState {
   stopNavigation: () => void;
   resetTrip: () => void;
   hydrateTripState: () => Promise<void>;
+  /** F36.1 — Restaura a rota ativa do SQLite no boot. Permite continuar
+   *  navegando offline apos kill do app. Best-effort: se nao houver
+   *  cache, mantem `activeRoute = null`. */
+  hydrateActiveRoute: () => Promise<void>;
   setRouteSettings: (settings: Partial<RouteSettings>) => void;
   setActiveRoute: (route: Route | null) => void;
   /** Replace or clear the pending OSRM alternatives. */
@@ -320,6 +325,26 @@ export const useNavigationStore = create<NavigationStoreState>((set, get) => ({
     } catch {
       // best-effort — never crash navigation start because of background hook
     }
+    // F36.1.1 — Re-persiste o snapshot da rota ativa com wasNavigating=true
+    // + tripStartedAt atualizado. Sem isso, o cache ficaria com a flag de
+    // navegacao desatualizada (false) e o hydrate da proxima sessao nao
+    // retomaria o modo navegacao.
+    const updatedState = get();
+    if (updatedState.activeRoute !== null) {
+      void (async () => {
+        try {
+          const repo = await getActiveRouteRepo();
+          await repo.save({
+            route: updatedState.activeRoute as Route,
+            destination: updatedState.destination ?? null,
+            wasNavigating: true,
+            tripStartedAt: updatedState.tripStartedAt,
+          });
+        } catch {
+          // best-effort
+        }
+      })();
+    }
   },
 
   stopNavigation: () => {
@@ -347,6 +372,28 @@ export const useNavigationStore = create<NavigationStoreState>((set, get) => ({
     } catch {
       // best-effort
     }
+    // F35.2 — Tracker de conclusao acompanha o navigation lifecycle. Se o
+    // piloto para no meio, o trip fica com `completed_at` NULL no SQLite
+    // (interpretado como "abandonou"). Lazy require pra dodger o ciclo
+    // import navigationStore <-> tripCompletionStore.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const m =
+        require('./tripCompletionStore') as typeof import('./tripCompletionStore');
+      m.useTripCompletionStore.getState().stopTracking();
+    } catch {
+      // best-effort
+    }
+    // F36.1 — Limpa o cache da rota ativa em SQLite. Sem isso, abrir o
+    // app no dia seguinte ressuscitaria a rota de ontem.
+    void (async () => {
+      try {
+        const repo = await getActiveRouteRepo();
+        await repo.clear();
+      } catch {
+        // best-effort
+      }
+    })();
     // Flush any queued trip-state write immediately so a fast OS kill after
     // stop does not lose the final distance value.
     void flushTripStateNow();
@@ -382,6 +429,47 @@ export const useNavigationStore = create<NavigationStoreState>((set, get) => ({
     });
   },
 
+  hydrateActiveRoute: async () => {
+    try {
+      const repo = await getActiveRouteRepo();
+      const snapshot = await repo.load();
+      if (!snapshot) return;
+      // Re-hidrata sem o setter publico — o setter dispara um save no
+      // SQLite que seria redundante (e poderia escrever timestamps novos
+      // sobre os antigos). Tambem nao queremos disparar o isFetchingRoute
+      // ou outros side effects.
+      const baseState: Partial<NavigationStoreState> = {
+        activeRoute: snapshot.route,
+        destination: snapshot.destination,
+        currentRouteIndex: 0,
+      };
+      // F36.1.1 — Se a sessao anterior estava em navegacao, retoma o modo
+      // navegacao + tripStartedAt original + reativa background tracking.
+      if (snapshot.wasNavigating) {
+        baseState.isNavigating = true;
+        if (snapshot.tripStartedAt !== null) {
+          baseState.tripStartedAt = snapshot.tripStartedAt;
+        }
+        // Reavaliacao do reserve mode acontece naturalmente no proximo
+        // setCurrentPosition; aqui so flippamos os flags principais.
+        set(baseState);
+        // Reativa background tracking (mesmo padrao do startNavigation).
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const m =
+            require('./locationStore') as typeof import('./locationStore');
+          void m.useLocationStore.getState().enableBackground();
+        } catch {
+          // best-effort
+        }
+      } else {
+        set(baseState);
+      }
+    } catch {
+      // best-effort
+    }
+  },
+
   setRouteSettings: (settings) => {
     set({ routeSettings: { ...get().routeSettings, ...settings } });
   },
@@ -398,6 +486,28 @@ export const useNavigationStore = create<NavigationStoreState>((set, get) => ({
     } else {
       set({ activeRoute: null, currentRouteIndex: 0 });
     }
+    // F36.1 — Persiste/limpa o cache de rota ativa em SQLite. Best-effort:
+    // falha no SQLite nao quebra a navegacao (in-memory ainda funciona).
+    // F36.1.1 — Persiste tambem isNavigating + tripStartedAt pra retomar
+    // o modo navegacao corretamente apos kill do app.
+    void (async () => {
+      try {
+        const repo = await getActiveRouteRepo();
+        if (route !== null) {
+          const st = get();
+          await repo.save({
+            route,
+            destination: st.destination ?? null,
+            wasNavigating: st.isNavigating,
+            tripStartedAt: st.tripStartedAt,
+          });
+        } else {
+          await repo.clear();
+        }
+      } catch {
+        // best-effort
+      }
+    })();
   },
 
   setRouteAlternatives: (routes) => {

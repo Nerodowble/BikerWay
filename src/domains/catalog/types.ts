@@ -167,6 +167,32 @@ export interface CatalogRouteMatch {
   realRoundTripFuelCostReais?: number;
   realRoundTripTotalCostReais?: number;
   /**
+   * F35.0.D rev3 — Polyline OSRM-real do trecho da rota (start → polyline
+   * waypoints → end). Persistida pelo `refineSingleMatch` quando o lookup do
+   * leg "rota" termina com sucesso, INDEPENDENTE dos legs approach/return.
+   *
+   * Antes desse campo, o refine fazia 3 chamadas OSRM, usava só o
+   * `distanceMeters` da do meio e descartava as coordenadas. O modal de
+   * prévia do RouteDetail tinha que refazer o fetch — quando o usuario
+   * abria o modal antes da refine terminar, ele esperava na fila do
+   * servidor publico OSRM (cabendo no pior caso ~37s entre timeout +
+   * retries).
+   *
+   * Agora o modal le esse campo direto se existir, e so dispara o fetch
+   * proprio se a refine nao rodou (rota fora do top-N) ou ainda nao
+   * terminou.
+   */
+  realRouteCoordinates?: ReadonlyArray<{ latitude: number; longitude: number }>;
+  /**
+   * F35.0.D rev4 — Polyline OSRM-real do trecho de aproximacao (GPS do
+   * piloto → coordenada_inicio). Persistida pelo `refineSingleMatch` /
+   * `fetchPreviewCoordinates` quando o leg "approach" termina com sucesso.
+   * Renderizada em laranja no modal de previa pra mostrar quanto o piloto
+   * precisa pedalar do ponto atual ate o comeco da rota. Fallback no modal e
+   * uma linha reta de 2 pontos enquanto OSRM nao resolve.
+   */
+  realApproachCoordinates?: ReadonlyArray<{ latitude: number; longitude: number }>;
+  /**
    * `true` while at least one of the three OSRM calls (approach, route,
    * return) is still in flight. The card flips to a small "atualizando…"
    * indicator while this is set. Mutually exclusive with

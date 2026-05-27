@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,12 +11,15 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteCard } from '@/shared/components/catalog/RouteCard';
-import { colors, spacing, typography } from '@/shared/theme';
+import { FeedCardList } from '@/shared/components/feed/FeedCardItem';
+import { colors, radius, spacing, typography } from '@/shared/theme';
 import { useCatalogStore } from '@/state/catalogStore';
+import { useFeedStore } from '@/state/feedStore';
 import {
   selectActiveMotorcycle,
   useMotorcycleStore,
 } from '@/state/motorcycleStore';
+import { useNavigationStore } from '@/state/navigationStore';
 import {
   calculateMaxAutonomy,
   calculateSafeAutonomy,
@@ -36,8 +39,13 @@ export const CatalogResultsScreen: React.FC<Props> = ({ navigation }) => {
   const isSearching = useCatalogStore((s) => s.isSearching);
   const lastError = useCatalogStore((s) => s.lastError);
   const filters = useCatalogStore((s) => s.filters);
+  const runDefaultSearch = useCatalogStore((s) => s.runDefaultSearch);
 
   const activeMoto = useMotorcycleStore(selectActiveMotorcycle);
+  const currentPosition = useNavigationStore((s) => s.currentPosition);
+  const feedCards = useFeedStore((s) => s.cards);
+  const refreshFeed = useFeedStore((s) => s.refresh);
+
   // The cards need the rider's safe autonomy to render the warning copy. We
   // prefer the value baked into `filters` (set by the previous screen using
   // the user-selected moto) and fall back to the active moto so the screen
@@ -52,8 +60,62 @@ export const CatalogResultsScreen: React.FC<Props> = ({ navigation }) => {
     );
   }, [activeMoto, filters]);
 
+  // F35.0.C — quando o piloto entra direto via Home (sem passar pelos
+  // filtros), `filters` ainda e null e `results` esta vazio. Aplicamos
+  // defaults inteligentes usando GPS + moto ativa e disparamos a busca uma
+  // unica vez. Se faltar GPS ou moto, o usuario ve o estado vazio + pode
+  // abrir filtros manualmente.
+  useEffect(() => {
+    if (filters !== null) return;
+    if (results.length > 0 || isSearching) return;
+    if (!currentPosition || !activeMoto) return;
+    const motoSafeAutonomy = calculateSafeAutonomy(
+      calculateMaxAutonomy(activeMoto.tankCapacity, activeMoto.averageConsump),
+    );
+    runDefaultSearch({
+      origin: {
+        latitude: currentPosition.latitude,
+        longitude: currentPosition.longitude,
+      },
+      motoConsumoKmL: activeMoto.averageConsump,
+      motoSafeAutonomyKm: motoSafeAutonomy,
+    });
+  }, [filters, results.length, isSearching, currentPosition, activeMoto, runDefaultSearch]);
+
+  // F35.5 — Refresh do feed "Fim de Semana Perfeito" quando ha GPS. Cache
+  // TTL de 30min mora dentro do store, entao chamadas repetidas viram no-op.
+  useEffect(() => {
+    if (!currentPosition) return;
+    void refreshFeed({
+      userPosition: {
+        latitude: currentPosition.latitude,
+        longitude: currentPosition.longitude,
+      },
+    });
+  }, [currentPosition, refreshFeed]);
+
+  // F35.0.C — "Customizado" = piloto passou pela tela de filtros e ajustou
+  // ao menos um campo alem dos defaults. Usado para destacar o botao
+  // FILTRAR ATIVOS no header.
+  const filtersCustomized = useMemo(() => {
+    if (!filters) return false;
+    return (
+      filters.budgetReais > 0 ||
+      filters.pavimento !== null ||
+      filters.nivelCurvas !== null
+    );
+  }, [filters]);
+
   const handleBack = useCallback(() => {
     navigation.goBack();
+  }, [navigation]);
+
+  const handleOpenFilters = useCallback(() => {
+    navigation.navigate('CatalogFilters');
+  }, [navigation]);
+
+  const handleOpenTrips = useCallback(() => {
+    navigation.navigate('Trips');
   }, [navigation]);
 
   const handleOpenDetail = useCallback(
@@ -90,19 +152,44 @@ export const CatalogResultsScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safe} testID="screen-catalog-results">
       <View style={styles.header}>
-        <Pressable
-          onPress={handleBack}
-          hitSlop={12}
-          style={({ pressed }) => [
-            styles.backButton,
-            pressed ? styles.backButtonPressed : null,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Voltar para filtros"
-          testID="btn-catalog-results-back"
-        >
-          <Text style={styles.backButtonLabel}>{'<'} Filtrar novamente</Text>
-        </Pressable>
+        <View style={styles.headerTopRow}>
+          <Pressable
+            onPress={handleBack}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed ? styles.backButtonPressed : null,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Voltar"
+            testID="btn-catalog-results-back"
+          >
+            <Text style={styles.backButtonLabel}>{'<'} Voltar</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleOpenFilters}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.filterButton,
+              filtersCustomized ? styles.filterButtonActive : null,
+              pressed ? styles.filterButtonPressed : null,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={
+              filtersCustomized ? 'Filtros ativos — toque para editar' : 'Abrir filtros'
+            }
+            testID="btn-catalog-results-filter"
+          >
+            <Text
+              style={[
+                styles.filterButtonLabel,
+                filtersCustomized ? styles.filterButtonLabelActive : null,
+              ]}
+            >
+              {filtersCustomized ? '⚙ FILTROS ATIVOS' : 'FILTRAR'}
+            </Text>
+          </Pressable>
+        </View>
         <Text style={styles.headerTitle}>{headerCount}</Text>
       </View>
 
@@ -125,6 +212,42 @@ export const CatalogResultsScreen: React.FC<Props> = ({ navigation }) => {
           initialNumToRender={INITIAL_RENDER}
           windowSize={WINDOW_SIZE}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <View>
+              {/* F35.6 — Entry pra trips multi-dia auto-geradas. Sempre
+                  visivel; a propria tela mostra estado vazio quando
+                  nao ha trips possiveis. */}
+              <Pressable
+                onPress={handleOpenTrips}
+                style={({ pressed }) => [
+                  styles.tripsBanner,
+                  pressed ? styles.tripsBannerPressed : null,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Abrir trips de fim de semana"
+                testID="btn-catalog-open-trips"
+              >
+                <Text style={styles.tripsBannerIcon}>🗺️</Text>
+                <View style={styles.tripsBannerBody}>
+                  <Text style={styles.tripsBannerTitle}>
+                    TRIPS DE FIM DE SEMANA
+                  </Text>
+                  <Text style={styles.tripsBannerSub}>
+                    Combos multi-dia gerados a partir do catálogo
+                  </Text>
+                </View>
+                <Text style={styles.tripsBannerChevron}>›</Text>
+              </Pressable>
+              {feedCards.length > 0 ? (
+                <View style={styles.feedHeaderBleed}>
+                  <FeedCardList
+                    cards={feedCards}
+                    onCardPress={handleOpenDetail}
+                  />
+                </View>
+              ) : null}
+            </View>
+          }
           ListEmptyComponent={
             <View style={styles.centerState}>
               <Text style={styles.helperText} testID="catalog-results-empty">
@@ -151,8 +274,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   backButton: {
-    alignSelf: 'flex-start',
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
   },
@@ -165,6 +292,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: typography.navSecondary.lineHeight,
   },
+  filterButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: 'transparent',
+  },
+  filterButtonActive: {
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(255,107,0,0.14)',
+  },
+  filterButtonPressed: {
+    opacity: 0.6,
+  },
+  filterButtonLabel: {
+    color: colors.textSecondary,
+    fontSize: typography.navSecondary.fontSize,
+    fontWeight: '700',
+    lineHeight: typography.navSecondary.lineHeight,
+    letterSpacing: 0.5,
+  },
+  filterButtonLabelActive: {
+    color: colors.accent,
+  },
   headerTitle: {
     color: colors.textPrimary,
     fontSize: typography.display.fontSize,
@@ -175,6 +327,50 @@ const styles = StyleSheet.create({
   listContent: {
     padding: spacing.lg,
     paddingBottom: spacing['3xl'],
+  },
+  feedHeaderBleed: {
+    // Anula o padding lateral do listContent pra que o carrossel possa
+    // alinhar com a borda da tela. Mantem o paddingTop herdado.
+    marginHorizontal: -spacing.lg,
+    marginBottom: spacing.md,
+  },
+  tripsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    marginBottom: spacing.lg,
+  },
+  tripsBannerPressed: {
+    opacity: 0.7,
+  },
+  tripsBannerIcon: {
+    fontSize: 28,
+  },
+  tripsBannerBody: {
+    flex: 1,
+  },
+  tripsBannerTitle: {
+    color: colors.accent,
+    fontSize: typography.navSecondary.fontSize,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  tripsBannerSub: {
+    color: colors.textSecondary,
+    fontSize: typography.caption.fontSize,
+    fontWeight: typography.caption.fontWeight,
+    lineHeight: typography.caption.lineHeight,
+    marginTop: 2,
+  },
+  tripsBannerChevron: {
+    color: colors.accent,
+    fontSize: 28,
+    fontWeight: '800',
   },
   cardWrap: {
     marginBottom: spacing.md,

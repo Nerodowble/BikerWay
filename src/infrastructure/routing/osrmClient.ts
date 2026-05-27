@@ -10,6 +10,7 @@ import {
   calculateSinuosity,
   pickMostSinuousIndex,
 } from '../../domains/routing/sinuosity';
+import type { OsrmCacheRepository } from '../db/osrmCacheRepository';
 
 const DEFAULT_BASE_URL = 'https://router.project-osrm.org';
 const DEFAULT_USER_AGENT = 'BikerWay/0.1 (https://github.com/bikerway/app)';
@@ -159,6 +160,25 @@ export function createOsrmClient(opts: OsrmClientOptions = {}): OsrmClient {
   const cache = new LRUCache<string, Route>(
     opts.cacheCapacity ?? DEFAULT_CACHE_CAPACITY,
   );
+
+  // F36.2 — Cache layer SQLite lazy. Inicializa na primeira chamada que
+  // precisar. Em ambientes sem SQLite (alguns tests), permanece null e o
+  // codigo degrada pra cache RAM-only.
+  let diskCacheRepo: OsrmCacheRepository | null = null;
+  let diskInitTried = false;
+  async function getDiskCache(): Promise<OsrmCacheRepository | null> {
+    if (diskInitTried) return diskCacheRepo;
+    diskInitTried = true;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const m =
+        require('../db/osrmCacheRepository') as typeof import('../db/osrmCacheRepository');
+      diskCacheRepo = await m.getOsrmCacheRepo();
+    } catch {
+      diskCacheRepo = null;
+    }
+    return diskCacheRepo;
+  }
   // Separate cache for alternative-route bags. We keep this in its own LRU
   // (typed as Route[]) so a getRoute() lookup never accidentally collides
   // with a getRouteAlternatives() entry. The key shape — see
@@ -176,18 +196,49 @@ export function createOsrmClient(opts: OsrmClientOptions = {}): OsrmClient {
       return cloneAsCacheHit(cached);
     }
 
+    // F36.2 — Tenta SQLite ANTES de hit network. Resolve offline cases
+    // (app aberto sem rede mas com rota cache de session anterior).
+    const disk = await getDiskCache();
+    if (disk !== null) {
+      try {
+        const fromDisk = await disk.get(cacheKey);
+        if (fromDisk !== null) {
+          cache.set(cacheKey, fromDisk);
+          return cloneAsCacheHit(fromDisk);
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
     const url = buildUrl(baseUrl, req);
     // Note: in React Native (Android), the platform may override the
     // User-Agent header. We still send it because OSRM-style policies and
     // CDNs in front of the public demo server expect a sane identifier.
-    const response = await fetchWithRetry(url, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': userAgent,
-      },
-    });
-    await assertOk(response);
+    let response: Response;
+    try {
+      response = await fetchWithRetry(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': userAgent,
+        },
+      });
+      await assertOk(response);
+    } catch (err) {
+      // F36.2 — Defesa adicional: se o erro veio antes do parse (network
+      // / timeout / DNS), tenta o disco "uma vez mais" caso o disco
+      // tenha sido populado por outro client/instancia entre a checagem
+      // inicial e aqui. Cobertura barata em troca de robustez offline.
+      if (disk !== null) {
+        const fromDisk = await disk.get(cacheKey).catch(() => null);
+        if (fromDisk !== null) {
+          cache.set(cacheKey, fromDisk);
+          return cloneAsCacheHit(fromDisk);
+        }
+      }
+      throw err;
+    }
     const data = await safeJson<OsrmResponse>(response);
 
     if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
@@ -229,6 +280,12 @@ export function createOsrmClient(opts: OsrmClientOptions = {}): OsrmClient {
     };
 
     cache.set(cacheKey, route);
+    // F36.2 — Write-through pro SQLite. Fire-and-forget: erro nao bloqueia
+    // o caller, so deixa o disk cache sem essa entrada (proximo fetch
+    // tenta de novo). PRIMARY KEY garante upsert.
+    if (disk !== null) {
+      void disk.set(cacheKey, route).catch(() => undefined);
+    }
     return route;
   }
 

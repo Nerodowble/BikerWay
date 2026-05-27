@@ -8,6 +8,12 @@ import React, {
 } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import MapView, { Polyline, UrlTile } from 'react-native-maps';
+// F36.3 — Cache de tiles em disco. Usamos a API legada do expo-file-system
+// pra resolver o documentDirectory e construir um path persistente que
+// sobrevive cold-start e upgrades do app. A pasta `tiles/` e gerenciada
+// pelo proprio react-native-maps (criada na demanda); nao precisamos
+// `mkdir` manual.
+import * as FileSystem from 'expo-file-system/legacy';
 import type {
   MapPressEvent,
   Region,
@@ -146,6 +152,17 @@ export interface BikerMapHandle {
    */
   centerOnUser: () => void;
 }
+
+// F36.3 — Path do cache de tiles em disco. Calculado uma unica vez em
+// module-load. `documentDirectory` e null em alguns testes; nesse caso
+// `TILE_CACHE_PATH` fica vazio e o UrlTile so usa cache em RAM (default
+// do react-native-maps). 30 dias = TTL razoavel: tiles do CartoDB nao
+// mudam frequentemente.
+const TILE_CACHE_PATH =
+  FileSystem.documentDirectory !== null
+    ? `${FileSystem.documentDirectory}tiles`
+    : '';
+const TILE_CACHE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 const DEFAULT_REGION: Region = {
   latitude: -23.5505,
@@ -345,6 +362,15 @@ export const BikerMapView = forwardRef<BikerMapHandle, BikerMapViewProps>(
             maximumZ={19}
             zIndex={-1}
             shouldReplaceMapContent={false}
+            // F36.3 — Cache em disco: tiles ja vistos ficam disponiveis
+            // offline. `tileCachePath` so passa quando documentDirectory
+            // existe (em testes pode ser null).
+            {...(TILE_CACHE_PATH.length > 0
+              ? {
+                  tileCachePath: TILE_CACHE_PATH,
+                  tileCacheMaxAge: TILE_CACHE_MAX_AGE_SECONDS,
+                }
+              : {})}
           />
 
           {userPosition ? <MotorcycleMarker position={userPosition} /> : null}

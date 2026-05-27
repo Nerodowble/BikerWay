@@ -28,6 +28,9 @@ import {
 import { PoiListSheet } from '@/shared/components/poi/PoiListSheet';
 import { FuelArrivalModal } from '@/shared/components/poi/FuelArrivalModal';
 import { RouteAlternativesSheet } from '@/shared/components/route/RouteAlternativesSheet';
+import { StampBanner } from '@/shared/components/passport/StampBanner';
+import { UpcomingTripBanner } from '@/shared/components/trips/UpcomingTripBanner';
+import { WhisperReportButton } from '@/shared/components/whisper/WhisperReportButton';
 import {
   EtaBanner,
   GpsLostBadge,
@@ -727,7 +730,10 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       );
       return;
     }
-    navigation.navigate('CatalogFilters');
+    // F35.0.C — entramos direto na lista de resultados; o piloto vai
+    // ajustar filtros pelo botao na propria tela so se quiser. Defaults
+    // sao aplicados em CatalogResults via runDefaultSearch.
+    navigation.navigate('CatalogResults');
   };
 
   // Settings hub. Intentionally NOT movement-locked — the hub itself is
@@ -955,6 +961,13 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.root} testID="screen-home">
+      {/* F35.3 — Banner de stamp aparece quando o piloto completa uma rota. */}
+      <StampBanner />
+      {/* F35.8 — Banner de lembrete pre-trip (D-1 ou D de uma SavedTrip). */}
+      <UpcomingTripBanner />
+      {/* F35.9 — Botao flutuante de reportar Whisper durante navegacao
+          ativa de rota do catalogo. */}
+      <WhisperReportButton />
       <View style={StyleSheet.absoluteFill}>
         <BikerMapView
           ref={mapHandleRef}
@@ -1265,6 +1278,27 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           ) : (
             <View>
+              {/* F36.1.1 — Quando ha uma rota tracada mas sem navegacao
+                  ativa (ex: app foi morto antes de INICIAR, ou rota
+                  ficou parada por algum motivo), oferece LIMPAR ROTA
+                  pra o piloto poder voltar ao zero sem ter que tracar
+                  outra rota por cima. */}
+              {activeRoute !== null ? (
+                <View style={styles.clearRouteRow}>
+                  <BigButton
+                    label="LIMPAR ROTA"
+                    variant="secondary"
+                    fullWidth
+                    compact
+                    leadingIcon={
+                      <CloseIcon size={22} color={colors.textPrimary} />
+                    }
+                    onPress={handleCancelNavigation}
+                    accessibilityLabel="Limpar a rota tracada"
+                    testID="btn-clear-route"
+                  />
+                </View>
+              ) : null}
               <BigButton
                 label="DESTINO"
                 variant="primary"
@@ -1696,6 +1730,9 @@ const styles = StyleSheet.create({
   },
   exploreButtonRow: {
     marginTop: spacing.sm,
+  },
+  clearRouteRow: {
+    marginBottom: spacing.sm,
   },
   // Round 44dp close button replacing the old "Limpar preview" pill. We
   // keep it self-centred horizontally and accent-coloured so it reads as

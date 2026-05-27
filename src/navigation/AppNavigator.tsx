@@ -12,6 +12,9 @@ import { RouteDetailScreen } from '@/screens/RouteDetailScreen';
 import { RiderProfileScreen } from '@/screens/RiderProfileScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { SOSScreen } from '@/screens/SOSScreen';
+import { PassportScreen } from '@/screens/PassportScreen';
+import { TripsScreen } from '@/screens/TripsScreen';
+import { TripBuilderScreen } from '@/screens/TripBuilderScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -99,6 +102,27 @@ const AppNavigator: React.FC = () => {
           // o mapa pode mostrar o pin do proprio SOS aberto.
           presentation: 'modal',
           animation: 'slide_from_bottom',
+        }}
+      />
+      <Stack.Screen
+        name="Passport"
+        component={PassportScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="Trips"
+        component={TripsScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="TripBuilder"
+        component={TripBuilderScreen}
+        options={{
+          animation: 'slide_from_right',
         }}
       />
     </Stack.Navigator>

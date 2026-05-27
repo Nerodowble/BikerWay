@@ -94,6 +94,19 @@ export interface CatalogStoreState {
   pendingRefine: Promise<void> | null;
   setFilters: (f: CatalogFilters) => void;
   runSearch: () => void;
+  /**
+   * F35.0.C — Aplica filtros default e roda a busca. Usado quando o piloto
+   * entra direto no catalogo via Home (sem passar pela tela de filtros).
+   * Defaults: orcamento=0 (sem limite, convencao do matcher), preco
+   * gasolina=DEFAULT_FUEL_PRICE_REAIS, sem restricao de pavimento/curvas.
+   * `motoConsumoKmL` e `motoSafeAutonomyKm` vem do caller (que conhece a
+   * moto ativa do piloto) — mantem o store agnostico do motorcycleStore.
+   */
+  runDefaultSearch: (input: {
+    origin: { latitude: number; longitude: number };
+    motoConsumoKmL: number;
+    motoSafeAutonomyKm: number;
+  }) => void;
   clearResults: () => void;
   /**
    * Fire OSRM lookups in the background to upgrade the top-N matches from
@@ -103,6 +116,19 @@ export interface CatalogStoreState {
    * via the `refineEpoch` counter — stale tasks drop their writes.
    */
   refineResultsWithOsrm: () => Promise<void>;
+  /**
+   * F35.0.D rev3/4 — On-demand OSRM lookup pra UMA rota especifica. Faz ate
+   * 2 chamadas em paralelo: leg "rota" (start→polyline→end) sempre, e leg
+   * "approach" (userPosition→start) quando `userPosition` e fornecido.
+   * Escreve `realRouteCoordinates` e/ou `realApproachCoordinates` no match
+   * correspondente. No-op por leg se ja existir coords no match. Idempotente
+   * — chamadas concorrentes pro mesmo id sao deduped pelo cache LRU do
+   * osrmClient.
+   */
+  fetchPreviewCoordinates: (
+    rotaId: string,
+    userPosition?: PreviewUserPosition,
+  ) => Promise<void>;
   setPreviewRoute: (id: string | null) => void;
   /**
    * Fetch the two OSRM legs (approach + along-route) for the currently
@@ -213,6 +239,47 @@ async function refineSingleMatch(
       ? returnResult.value.distanceMeters
       : null;
 
+  // F35.0.D rev3/4 — Persistir as coordenadas das legs "rota" e "approach"
+  // assim que cada uma resolve, INDEPENDENTE das outras. O modal de prévia
+  // do RouteDetail precisa só dessas coords (rota + approach); antes elas
+  // eram descartadas e o modal tinha que refazer o fetch.
+  const routeCoordinates =
+    routeResult.status === 'fulfilled' &&
+    Array.isArray(routeResult.value?.coordinates) &&
+    routeResult.value.coordinates.length > 0
+      ? routeResult.value.coordinates.map((c) => ({
+          latitude: c.latitude,
+          longitude: c.longitude,
+        }))
+      : null;
+  const approachCoordinates =
+    approachResult.status === 'fulfilled' &&
+    Array.isArray(approachResult.value?.coordinates) &&
+    approachResult.value.coordinates.length > 0
+      ? approachResult.value.coordinates.map((c) => ({
+          latitude: c.latitude,
+          longitude: c.longitude,
+        }))
+      : null;
+  if (routeCoordinates !== null || approachCoordinates !== null) {
+    set((prev) => {
+      if (prev.refineEpoch !== epoch) return prev;
+      return {
+        results: prev.results.map((m) => {
+          if (m.route.rota_id !== match.route.rota_id) return m;
+          const patch: Partial<CatalogRouteMatch> = {};
+          if (routeCoordinates !== null) {
+            patch.realRouteCoordinates = routeCoordinates;
+          }
+          if (approachCoordinates !== null) {
+            patch.realApproachCoordinates = approachCoordinates;
+          }
+          return { ...m, ...patch };
+        }),
+      };
+    });
+  }
+
   if (approachMeters === null || routeMeters === null || returnMeters === null) {
     // Drop the refining flag without metrics; card falls back to haversine.
     set((prev) => {
@@ -284,6 +351,25 @@ export const useCatalogStore = create<CatalogStoreState>((set, get) => ({
 
   setFilters: (f) => {
     set({ filters: f, lastError: null });
+  },
+
+  runDefaultSearch: ({ origin, motoConsumoKmL, motoSafeAutonomyKm }) => {
+    // F35.0.C — defaults inteligentes: sem limite de orcamento (budget=0 e
+    // convencao do matcher pra "sem limite"), sem filtro de pavimento/
+    // curvas, preco padrao. Se uma busca anterior ja tinha filtros mais
+    // restritivos, ela e SOBRESCRITA — runDefaultSearch e a entrada
+    // "limpa" do catalogo.
+    const defaults: CatalogFilters = {
+      origin,
+      budgetReais: 0,
+      motoConsumoKmL,
+      motoSafeAutonomyKm,
+      pavimento: null,
+      nivelCurvas: null,
+      fuelPricePerLiter: DEFAULT_FUEL_PRICE_REAIS,
+    };
+    set({ filters: defaults, lastError: null });
+    get().runSearch();
   },
 
   runSearch: () => {
@@ -379,6 +465,95 @@ export const useCatalogStore = create<CatalogStoreState>((set, get) => ({
       workers.push(runWorker());
     }
     await Promise.all(workers);
+  },
+
+  fetchPreviewCoordinates: async (rotaId, userPosition) => {
+    const state = get();
+    const match = state.results.find((m) => m.route.rota_id === rotaId);
+    if (!match) return;
+    const epoch = state.refineEpoch;
+    const start = {
+      latitude: match.route.coordenada_inicio.latitude,
+      longitude: match.route.coordenada_inicio.longitude,
+    };
+    const end = {
+      latitude: match.route.coordenada_fim.latitude,
+      longitude: match.route.coordenada_fim.longitude,
+    };
+
+    // Cada leg roda sob seu proprio guard de idempotencia. Se a refine
+    // padrao ja gravou as coords da leg correspondente, nada acontece aqui.
+    const needsRoute =
+      !Array.isArray(match.realRouteCoordinates) ||
+      match.realRouteCoordinates.length === 0;
+    const needsApproach =
+      userPosition !== undefined &&
+      (!Array.isArray(match.realApproachCoordinates) ||
+        match.realApproachCoordinates.length === 0);
+
+    if (!needsRoute && !needsApproach) return;
+
+    const waypoints = pickWaypoints(
+      match.route.polilinha_simplificada,
+      REFINE_WAYPOINTS,
+    );
+    const routeRequest =
+      waypoints.length > 0 ? { start, end, waypoints } : { start, end };
+
+    const tasks: Array<Promise<{
+      leg: 'route' | 'approach';
+      coords: Array<{ latitude: number; longitude: number }> | null;
+    }>> = [];
+
+    if (needsRoute) {
+      tasks.push(
+        osrmClient
+          .getRoute(routeRequest)
+          .then((r) => ({
+            leg: 'route' as const,
+            coords: r.coordinates.map((c) => ({
+              latitude: c.latitude,
+              longitude: c.longitude,
+            })),
+          }))
+          .catch(() => ({ leg: 'route' as const, coords: null })),
+      );
+    }
+    if (needsApproach && userPosition !== undefined) {
+      tasks.push(
+        osrmClient
+          .getRoute({ start: userPosition, end: start })
+          .then((r) => ({
+            leg: 'approach' as const,
+            coords: r.coordinates.map((c) => ({
+              latitude: c.latitude,
+              longitude: c.longitude,
+            })),
+          }))
+          .catch(() => ({ leg: 'approach' as const, coords: null })),
+      );
+    }
+
+    const results = await Promise.all(tasks);
+    if (get().refineEpoch !== epoch) return;
+    const routeCoords = results.find((r) => r.leg === 'route')?.coords ?? null;
+    const approachCoords =
+      results.find((r) => r.leg === 'approach')?.coords ?? null;
+    if (routeCoords === null && approachCoords === null) return;
+    set((prev) => {
+      if (prev.refineEpoch !== epoch) return prev;
+      return {
+        results: prev.results.map((m) => {
+          if (m.route.rota_id !== rotaId) return m;
+          const patch: Partial<CatalogRouteMatch> = {};
+          if (routeCoords !== null) patch.realRouteCoordinates = routeCoords;
+          if (approachCoords !== null) {
+            patch.realApproachCoordinates = approachCoords;
+          }
+          return { ...m, ...patch };
+        }),
+      };
+    });
   },
 
   setPreviewRoute: (id) => {
