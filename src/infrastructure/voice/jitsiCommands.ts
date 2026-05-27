@@ -1,6 +1,7 @@
 export type JitsiCommand =
   | { kind: 'toggleAudio' }
   | { kind: 'setAudioMuted'; muted: boolean }
+  | { kind: 'setIncomingMuted'; muted: boolean }
   | { kind: 'hangup' }
   | { kind: 'setAudioOutput'; deviceId: string }
   | {
@@ -38,6 +39,16 @@ export function buildJitsiInjectionScript(cmd: JitsiCommand): string {
       const desired = cmd.muted ? 'true' : 'false';
       return wrap(
         'if (typeof window.bwSetMuted === "function") { window.bwSetMuted(' + desired + '); }',
+      );
+    }
+
+    case 'setIncomingMuted': {
+      // F30: muta o audio RECEBIDO local — nao toca em tracks remotas, so
+      // seta audio.muted=true em cada <audio> element renderizado no DOM
+      // da WebView. Quem ta na chamada nao percebe.
+      const desired = cmd.muted ? 'true' : 'false';
+      return wrap(
+        'if (typeof window.bwSetIncomingMuted === "function") { window.bwSetIncomingMuted(' + desired + '); }',
       );
     }
 

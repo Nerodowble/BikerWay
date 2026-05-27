@@ -1,7 +1,8 @@
-import { create } from 'zustand';
+import { create, type StoreApi } from 'zustand';
 import { loadCatalog } from '@/infrastructure/catalog/catalogClient';
 import { matchRoutes } from '@/domains/catalog/matcher';
 import { osrmClient } from '@/infrastructure/routing/osrmClient';
+import { calculateRouteCost, DEFAULT_FUEL_PRICE_REAIS } from '@/domains/catalog/cost';
 import type {
   CatalogFilters,
   CatalogRouteMatch,
@@ -24,6 +25,14 @@ const MAX_PREVIEW_WAYPOINTS = 6;
  * it and let `MAX_FULL_WAYPOINTS - 1` polyline vertices fill the remainder.
  */
 const MAX_FULL_WAYPOINTS = 7;
+
+// Top N matches receive the OSRM refinement pass — past 5 the rider
+// rarely scrolls and each match costs 3 OSRM round-trips. Concurrency
+// of 2 keeps the public OSRM demo server within its informal rate limit
+// while still finishing the top 5 in under ~20 seconds on cellular.
+const REFINE_TOP_N = 5;
+const REFINE_CONCURRENCY = 2;
+const REFINE_WAYPOINTS = 6;
 
 export interface PreviewUserPosition {
   latitude: number;
@@ -70,9 +79,30 @@ export interface CatalogStoreState {
    * fall back to the raw polyline for whatever is missing.
    */
   previewError: string | null;
+  /**
+   * Monotonic counter bumped every time the results array is replaced
+   * (runSearch, clearResults). The background OSRM refine captures this
+   * at start and re-checks before each `set` — mismatched epoch drops the
+   * update. Held in state (not module-level) so test resets clear it too.
+   */
+  refineEpoch: number;
+  /**
+   * Awaitable handle to the most recent background refine pass. Tests use
+   * it to drain microtasks; UI should rely on per-match `isRefining` /
+   * `hasRealMetrics` instead of this single global handle.
+   */
+  pendingRefine: Promise<void> | null;
   setFilters: (f: CatalogFilters) => void;
   runSearch: () => void;
   clearResults: () => void;
+  /**
+   * Fire OSRM lookups in the background to upgrade the top-N matches from
+   * haversine approximations to real-road metrics. Resolves when every
+   * refinement task settles. Production code ignores the return value
+   * (runSearch kicks it off implicitly); tests await it. Cancellation is
+   * via the `refineEpoch` counter — stale tasks drop their writes.
+   */
+  refineResultsWithOsrm: () => Promise<void>;
   setPreviewRoute: (id: string | null) => void;
   /**
    * Fetch the two OSRM legs (approach + along-route) for the currently
@@ -123,6 +153,122 @@ function pickWaypoints(
   return out;
 }
 
+/**
+ * Refine ONE match: fire approach + route + return legs in parallel via
+ * `Promise.allSettled`, then write a complete `real*` set when all three
+ * succeed, or a `hasRealMetrics=false` flag drop when any fail. The
+ * outcomes are all-or-nothing because mixing one real leg with two
+ * haversine legs would confuse the rider. Cancellation: re-check
+ * `refineEpoch` before every `set` so a stale response can never mutate
+ * a newer results array.
+ */
+async function refineSingleMatch(
+  match: CatalogRouteMatch,
+  filters: CatalogFilters,
+  epoch: number,
+  set: StoreApi<CatalogStoreState>['setState'],
+  get: StoreApi<CatalogStoreState>['getState'],
+): Promise<void> {
+  const start = {
+    latitude: match.route.coordenada_inicio.latitude,
+    longitude: match.route.coordenada_inicio.longitude,
+  };
+  const end = {
+    latitude: match.route.coordenada_fim.latitude,
+    longitude: match.route.coordenada_fim.longitude,
+  };
+  const waypoints = pickWaypoints(
+    match.route.polilinha_simplificada,
+    REFINE_WAYPOINTS,
+  );
+
+  const routeRequest =
+    waypoints.length > 0
+      ? { start, end, waypoints }
+      : { start, end };
+
+  const [approachResult, routeResult, returnResult] = await Promise.allSettled([
+    osrmClient.getRoute({ start: filters.origin, end: start }),
+    osrmClient.getRoute(routeRequest),
+    osrmClient.getRoute({ start: end, end: filters.origin }),
+  ]);
+
+  if (get().refineEpoch !== epoch) return;
+
+  // Defensive: a fulfilled-but-malformed response (missing `distanceMeters`)
+  // collapses to the "leg failed" path so NaN cannot enter the cost math.
+  const approachMeters =
+    approachResult.status === 'fulfilled' &&
+    typeof approachResult.value?.distanceMeters === 'number'
+      ? approachResult.value.distanceMeters
+      : null;
+  const routeMeters =
+    routeResult.status === 'fulfilled' &&
+    typeof routeResult.value?.distanceMeters === 'number'
+      ? routeResult.value.distanceMeters
+      : null;
+  const returnMeters =
+    returnResult.status === 'fulfilled' &&
+    typeof returnResult.value?.distanceMeters === 'number'
+      ? returnResult.value.distanceMeters
+      : null;
+
+  if (approachMeters === null || routeMeters === null || returnMeters === null) {
+    // Drop the refining flag without metrics; card falls back to haversine.
+    set((prev) => {
+      if (prev.refineEpoch !== epoch) return prev;
+      return {
+        results: prev.results.map((m) =>
+          m.route.rota_id === match.route.rota_id
+            ? { ...m, isRefining: false, hasRealMetrics: false }
+            : m,
+        ),
+      };
+    });
+    return;
+  }
+
+  // All three legs succeeded — rebuild the cost using `calculateRouteCost`
+  // so pricing math stays consistent with the matcher's initial estimate.
+  const realApproachDistanceKm = approachMeters / 1000;
+  const realRouteDistanceKm = routeMeters / 1000;
+  const realReturnDistanceKm = returnMeters / 1000;
+  const realRoundTripDistanceKm =
+    realApproachDistanceKm + realRouteDistanceKm + realReturnDistanceKm;
+  const effectiveFuelPrice =
+    filters.fuelPricePerLiter > 0
+      ? filters.fuelPricePerLiter
+      : DEFAULT_FUEL_PRICE_REAIS;
+  const breakdown = calculateRouteCost(
+    realRoundTripDistanceKm,
+    filters.motoConsumoKmL,
+    effectiveFuelPrice,
+    match.route.total_pedagios_moto_reais,
+  );
+
+  set((prev) => {
+    if (prev.refineEpoch !== epoch) return prev;
+    return {
+      results: prev.results.map((m) =>
+        m.route.rota_id === match.route.rota_id
+          ? {
+              ...m,
+              realApproachDistanceKm,
+              realRouteDistanceKm,
+              realReturnDistanceKm,
+              realRoundTripDistanceKm,
+              realRoundTripFuelLiters: breakdown.liters,
+              realRoundTripFuelCostReais: breakdown.fuelCost,
+              realRoundTripTotalCostReais: breakdown.totalCost,
+              isRefining: false,
+              hasRealMetrics: true,
+            }
+          : m,
+      ),
+    };
+  });
+}
+
 export const useCatalogStore = create<CatalogStoreState>((set, get) => ({
   filters: null,
   results: [],
@@ -133,6 +279,8 @@ export const useCatalogStore = create<CatalogStoreState>((set, get) => ({
   previewRoute: null,
   isFetchingPreview: false,
   previewError: null,
+  refineEpoch: 0,
+  pendingRefine: null,
 
   setFilters: (f) => {
     set({ filters: f, lastError: null });
@@ -152,18 +300,85 @@ export const useCatalogStore = create<CatalogStoreState>((set, get) => ({
     try {
       const catalog = loadCatalog();
       const matches = matchRoutes(catalog, filters);
-      set({ results: matches, isSearching: false, lastError: null });
+      // Bump the epoch as the new results land so any in-flight refine
+      // from a previous search aborts before stamping stale `real*` fields.
+      set((prev) => ({
+        results: matches,
+        isSearching: false,
+        lastError: null,
+        refineEpoch: prev.refineEpoch + 1,
+      }));
+      // Fire-and-forget; stash the promise so tests can drain microtasks.
+      const refinePromise = get().refineResultsWithOsrm();
+      set({ pendingRefine: refinePromise });
+      void refinePromise;
     } catch (err) {
       const message =
         err instanceof Error && err.message.length > 0
           ? err.message
           : 'Falha ao carregar o catálogo';
-      set({ lastError: message, results: [], isSearching: false });
+      set((prev) => ({
+        lastError: message,
+        results: [],
+        isSearching: false,
+        refineEpoch: prev.refineEpoch + 1,
+      }));
     }
   },
 
   clearResults: () => {
-    set({ results: [], lastError: null });
+    // Bump the epoch so a pending refine cannot repopulate after a clear.
+    set((prev) => ({
+      results: [],
+      lastError: null,
+      refineEpoch: prev.refineEpoch + 1,
+    }));
+  },
+
+  refineResultsWithOsrm: async () => {
+    const startState = get();
+    const filters = startState.filters;
+    const epoch = startState.refineEpoch;
+    if (!filters) return;
+    // Keying by id (not index) keeps writes safe against concurrent
+    // mutations that change the array length.
+    const targets = startState.results.slice(0, REFINE_TOP_N);
+    if (targets.length === 0) return;
+
+    // Flip the top-N into the refining state synchronously so the UI shows
+    // the placeholder immediately, before any OSRM call resolves.
+    const refiningIds = new Set(targets.map((m) => m.route.rota_id));
+    set((prev) => {
+      if (prev.refineEpoch !== epoch) return prev;
+      return {
+        results: prev.results.map((m) =>
+          refiningIds.has(m.route.rota_id)
+            ? { ...m, isRefining: true, hasRealMetrics: false }
+            : m,
+        ),
+      };
+    });
+
+    // Bounded-concurrency queue: REFINE_CONCURRENCY workers share a
+    // monotonic index. Cheaper than pulling in p-limit and keeps the
+    // epoch-check inline so cancellation stays local.
+    let nextIndex = 0;
+    const runWorker = async (): Promise<void> => {
+      while (true) {
+        const i = nextIndex;
+        nextIndex += 1;
+        if (i >= targets.length) return;
+        const match = targets[i];
+        if (!match) continue;
+        if (get().refineEpoch !== epoch) return;
+        await refineSingleMatch(match, filters, epoch, set, get);
+      }
+    };
+    const workers: Array<Promise<void>> = [];
+    for (let w = 0; w < REFINE_CONCURRENCY; w += 1) {
+      workers.push(runWorker());
+    }
+    await Promise.all(workers);
   },
 
   setPreviewRoute: (id) => {
@@ -289,6 +504,21 @@ export function selectPreviewRoute(state: CatalogStoreState):
   return (
     state.results.find((m) => m.route.rota_id === state.previewRouteId) ?? null
   );
+}
+
+/**
+ * Curried selector factory: returns a state-only function that locates a
+ * match by `rota_id` inside `results`. Used by `RouteDetailScreen` to
+ * subscribe to a single match — the screen receives `rotaId` from the
+ * navigation params, and Zustand calls the inner function on every store
+ * change, returning the same reference until the underlying match mutates
+ * (e.g. when OSRM refinement upgrades the `real*` fields, which is exactly
+ * when we want the detail screen to re-render).
+ */
+export function selectMatchById(rotaId: string):
+  (state: CatalogStoreState) => CatalogRouteMatch | null {
+  return (state) =>
+    state.results.find((m) => m.route.rota_id === rotaId) ?? null;
 }
 
 /**

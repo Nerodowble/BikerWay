@@ -127,6 +127,22 @@ function selectorsFor(category: PoiCategory): readonly string[] {
         '["amenity"="motorcycle_repair"]',
         '["shop"="car_repair"]',
       ];
+    case 'restaurante':
+      // amenity=restaurant cobre da pizzaria ao prato feito; fast_food
+      // cobre lanchonete/hambugueria. Sem `cuisine=` filtro pra nao
+      // reduzir demais o resultado em cidade pequena onde o tag e omisso.
+      return ['["amenity"="restaurant"]', '["amenity"="fast_food"]'];
+    case 'hotel':
+      // OSM separa hotel "tradicional" de motel/inn. Em BR, motel tem
+      // conotacao "drive-in"; mantemos junto porque pra o piloto cansado
+      // de viagem qualquer cama serve, e a marca/nome do estabelecimento
+      // ja deixa claro qual e qual no app via `name`.
+      return ['["tourism"="hotel"]', '["tourism"="motel"]'];
+    case 'pousada':
+      // guest_house = pousada classica; hostel = albergue (categoria
+      // gemea no contexto de viagem moto barata). Separamos de "hotel"
+      // pq o feel + preco e diferente.
+      return ['["tourism"="guest_house"]', '["tourism"="hostel"]'];
     default: {
       // Exhaustiveness guard — fails the build if a new PoiCategory is
       // added without a matching branch above.
@@ -181,6 +197,12 @@ function fallbackName(category: PoiCategory): string {
       return 'Borracheiro';
     case 'mechanic':
       return 'Oficina mecânica';
+    case 'restaurante':
+      return 'Restaurante';
+    case 'hotel':
+      return 'Hotel';
+    case 'pousada':
+      return 'Pousada';
     default: {
       const _exhaustive: never = category;
       throw new Error(`Unsupported POI category: ${String(_exhaustive)}`);
@@ -292,12 +314,15 @@ export function createOverpassClient(
       // the rest of the app. Message text varies by category so the
       // banner reads naturally.
       if (err instanceof HttpError) {
-        const label =
-          category === 'fuel'
-            ? 'postos'
-            : category === 'tyres'
-              ? 'borracheiros'
-              : 'oficinas';
+        const labelByCategory: Record<PoiCategory, string> = {
+          fuel: 'postos',
+          tyres: 'borracheiros',
+          mechanic: 'oficinas',
+          restaurante: 'restaurantes',
+          hotel: 'hoteis',
+          pousada: 'pousadas',
+        };
+        const label = labelByCategory[category];
         const wrapped = new Error(
           `Falha ao buscar ${label} (Overpass) — HTTP ${err.status}`,
         );

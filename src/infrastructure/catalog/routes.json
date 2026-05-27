@@ -14,13 +14,17 @@
       "longitude": -49.625833
     },
     "distancia_total_km": 32,
-    "total_pedagios_moto_reais": 0.00,
+    "total_pedagios_moto_reais": 0,
     "caracteristicas": {
       "tipo_pavimento": "asfalto",
       "nivel_curvas": "alto",
       "trecho_critico_sem_posto_km": 25
     },
-    "interconexoes_ids": ["serra-do-corvo-branco-sc", "br-101-sc"],
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "serra-do-corvo-branco-sc",
+      "br-101-sc"
+    ],
     "pontos_apoio_homologados": [
       {
         "tipo": "mirante",
@@ -46,17 +50,48 @@
       {
         "tipo": "mirante",
         "nome": "Mirante Curva do S",
-        "latitude": -28.385000,
-        "longitude": -49.530000,
+        "latitude": -28.385,
+        "longitude": -49.53,
         "descricao_biker": "Vista da famosa Curva do S, paisagem panorâmica e parada rápida para fotos."
       }
     ],
     "polilinha_simplificada": [
-      {"lat": -28.388889, "lng": -49.395833},
-      {"lat": -28.391944, "lng": -49.460000},
-      {"lat": -28.391944, "lng": -49.560278},
-      {"lat": -28.370000, "lng": -49.600000},
-      {"lat": -28.339722, "lng": -49.625833}
+      {
+        "lat": -28.388889,
+        "lng": -49.395833
+      },
+      {
+        "lat": -28.391944,
+        "lng": -49.46
+      },
+      {
+        "lat": -28.391944,
+        "lng": -49.560278
+      },
+      {
+        "lat": -28.37,
+        "lng": -49.6
+      },
+      {
+        "lat": -28.339722,
+        "lng": -49.625833
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "alta",
+    "dificuldade": "intermediario",
+    "melhor_epoca": "Marco a outubro. Evitar junho a agosto: neblina densa pela manha e geadas pontuais no topo da serra que tornam o asfalto escorregadio.",
+    "descricao_biker": "A Serra do Rio do Rastro e o trecho mais famoso da SC-390 e referencia obrigatoria para qualquer biker do Sul. Sao 32 km de asfalto novo com curvas em S espelhadas que sobem 600 m de elevacao em poucos quilometros, o famoso caracol visto do mirante. Pista boa, sinalizacao razoavel e trafego pesado de turistas aos fins de semana. Ideal para naked e sport-touring; com touring grande exige atencao redobrada nas ferraduras. Abasteca em Lauro Muller antes de subir.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/Serra_do_Rio_do_Rastro",
+      "https://www.deinfra.sc.gov.br/",
+      "https://motonline.com.br/estradas/serra-do-rio-do-rastro"
+    ],
+    "dicas_seguranca": [
+      "Neblina densa frequente entre maio e setembro entre o mirante e Bom Jardim da Serra - reduza velocidade e ligue piscas.",
+      "Trafego intenso de turistas aos fins de semana: evite ultrapassagens nas curvas cegas, especialmente na subida.",
+      "Sem cobertura de celular Vivo/Tim entre KM 8 e KM 22 da subida.",
+      "Posto de Lauro Muller so atende 24h em dias uteis; aos domingos pode fechar a noite."
     ]
   },
   {
@@ -74,13 +109,17 @@
       "longitude": -47.299167
     },
     "distancia_total_km": 55,
-    "total_pedagios_moto_reais": 0.00,
+    "total_pedagios_moto_reais": 0,
     "caracteristicas": {
       "tipo_pavimento": "asfalto",
       "nivel_curvas": "medio",
       "trecho_critico_sem_posto_km": 15
     },
-    "interconexoes_ids": ["rodovia-castello-branco-sp", "rodovia-marechal-rondon-sp"],
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "rodovia-castello-branco-sp",
+      "rodovia-marechal-rondon-sp"
+    ],
     "pontos_apoio_homologados": [
       {
         "tipo": "posto_gasolina",
@@ -99,7 +138,7 @@
       {
         "tipo": "restaurante",
         "nome": "Empório da Estrada (Cabreúva)",
-        "latitude": -23.307500,
+        "latitude": -23.3075,
         "longitude": -47.131389,
         "descricao_biker": "Café colonial e refeições, estacionamento seguro e movimento intenso de motociclistas aos fins de semana."
       },
@@ -107,17 +146,35 @@
         "tipo": "posto_gasolina",
         "nome": "Posto Shell Cabreúva",
         "latitude": -23.310278,
-        "longitude": -47.135000,
+        "longitude": -47.135,
         "descricao_biker": "Último posto antes do trecho final até Itu, com loja de conveniência e área de descanso."
       }
     ],
     "polilinha_simplificada": [
-      {"lat": -23.443889, "lng": -46.917778},
-      {"lat": -23.410000, "lng": -46.975000},
-      {"lat": -23.395833, "lng": -46.999722},
-      {"lat": -23.335000, "lng": -47.100000},
-      {"lat": -23.310278, "lng": -47.135000},
-      {"lat": -23.264167, "lng": -47.299167}
+      {
+        "lat": -23.443889,
+        "lng": -46.917778
+      },
+      {
+        "lat": -23.41,
+        "lng": -46.975
+      },
+      {
+        "lat": -23.395833,
+        "lng": -46.999722
+      },
+      {
+        "lat": -23.335,
+        "lng": -47.1
+      },
+      {
+        "lat": -23.310278,
+        "lng": -47.135
+      },
+      {
+        "lat": -23.264167,
+        "lng": -47.299167
+      }
     ]
   },
   {
@@ -127,7 +184,7 @@
     "coordenada_inicio": {
       "cidade": "Natal (Ponta Negra)",
       "latitude": -5.880556,
-      "longitude": -35.180000
+      "longitude": -35.18
     },
     "coordenada_fim": {
       "cidade": "Tibau do Sul (Praia da Pipa)",
@@ -135,13 +192,17 @@
       "longitude": -35.054722
     },
     "distancia_total_km": 85,
-    "total_pedagios_moto_reais": 0.00,
+    "total_pedagios_moto_reais": 0,
     "caracteristicas": {
       "tipo_pavimento": "asfalto",
       "nivel_curvas": "baixo",
       "trecho_critico_sem_posto_km": 20
     },
-    "interconexoes_ids": ["br-101-rn", "litoral-sul-rn"],
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "br-101-rn",
+      "litoral-sul-rn"
+    ],
     "pontos_apoio_homologados": [
       {
         "tipo": "restaurante",
@@ -168,17 +229,35 @@
         "tipo": "restaurante",
         "nome": "Restaurante Cravo & Canela (Tibau do Sul)",
         "latitude": -6.184167,
-        "longitude": -35.085000,
+        "longitude": -35.085,
         "descricao_biker": "Boa refeição com estacionamento e ambiente acolhedor para grupos de motociclistas."
       }
     ],
     "polilinha_simplificada": [
-      {"lat": -5.880556, "lng": -35.180000},
-      {"lat": -5.973889, "lng": -35.115278},
-      {"lat": -6.005556, "lng": -35.108333},
-      {"lat": -6.120000, "lng": -35.090000},
-      {"lat": -6.184167, "lng": -35.085000},
-      {"lat": -6.227778, "lng": -35.054722}
+      {
+        "lat": -5.880556,
+        "lng": -35.18
+      },
+      {
+        "lat": -5.973889,
+        "lng": -35.115278
+      },
+      {
+        "lat": -6.005556,
+        "lng": -35.108333
+      },
+      {
+        "lat": -6.12,
+        "lng": -35.09
+      },
+      {
+        "lat": -6.184167,
+        "lng": -35.085
+      },
+      {
+        "lat": -6.227778,
+        "lng": -35.054722
+      }
     ]
   },
   {
@@ -196,18 +275,23 @@
       "longitude": -44.713056
     },
     "distancia_total_km": 710,
-    "total_pedagios_moto_reais": 0.00,
+    "total_pedagios_moto_reais": 0,
     "caracteristicas": {
       "tipo_pavimento": "misto",
       "nivel_curvas": "alto",
       "trecho_critico_sem_posto_km": 45
     },
-    "interconexoes_ids": ["serra-da-mantiqueira-mg", "rodovia-rio-santos-rj", "br-040-mg"],
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "serra-da-mantiqueira-mg",
+      "rodovia-rio-santos-rj",
+      "br-040-mg"
+    ],
     "pontos_apoio_homologados": [
       {
         "tipo": "mirante",
         "nome": "Mirante Morro São Sebastião (Ouro Preto)",
-        "latitude": -20.382500,
+        "latitude": -20.3825,
         "longitude": -43.510833,
         "descricao_biker": "Vista panorâmica do conjunto histórico, parada inicial estratégica para fotos."
       },
@@ -236,17 +320,52 @@
         "tipo": "restaurante",
         "nome": "Restaurante Banana da Terra (Paraty)",
         "latitude": -23.218333,
-        "longitude": -44.715000,
+        "longitude": -44.715,
         "descricao_biker": "Boa parada gastronômica ao final do Caminho Velho, com estrutura para grupos."
       }
     ],
     "polilinha_simplificada": [
-      {"lat": -20.385833, "lng": -43.503611},
-      {"lat": -21.110556, "lng": -44.173611},
-      {"lat": -21.135833, "lng": -44.260833},
-      {"lat": -22.704722, "lng": -45.527778},
-      {"lat": -22.940000, "lng": -45.300000},
-      {"lat": -23.220278, "lng": -44.713056}
+      {
+        "lat": -20.385833,
+        "lng": -43.503611
+      },
+      {
+        "lat": -21.110556,
+        "lng": -44.173611
+      },
+      {
+        "lat": -21.135833,
+        "lng": -44.260833
+      },
+      {
+        "lat": -22.704722,
+        "lng": -45.527778
+      },
+      {
+        "lat": -22.94,
+        "lng": -45.3
+      },
+      {
+        "lat": -23.220278,
+        "lng": -44.713056
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "media",
+    "dificuldade": "avancado",
+    "melhor_epoca": "Abril a setembro (seca). Evitar dezembro a marco: chuvas fortes na Mantiqueira e na Serra da Bocaina deixam trechos de paralelepipedo e terra batida traicoeiros.",
+    "descricao_biker": "Roteiro historico de 710 km que reconstroi o caminho colonial do ouro de Ouro Preto a Paraty, passando por Tiradentes, Sao Joao del-Rei, Campos do Jordao e a Serra da Bocaina. E uma rota de varios dias e exige planejamento: tem trechos de paralelepipedo nas cidades historicas, trechos de terra batida em Minas e o descenso tecnico da Bocaina ate o litoral. Indicado para sport-touring, big trail ou dual-sport com piloto experiente. Combustivel e tranquilo nas cidades, mas o trecho Mantiqueira-Bocaina pede atencao a autonomia. Sem pedagios para motos no trajeto: BR-040 MG (EPR Via Mineira) isenta moto, e as estradas estaduais MG (BR-265, MG-129) + a descida da Bocaina via Cunha-Paraty (SP-171/RJ-165) nao tem cobranca.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/Estrada_Real",
+      "https://www.institutoestradareal.com.br/",
+      "https://eprviamineira.com.br/reajuste-contratual-da-tarifa-de-pedagio-da-br-040-entra-em-vigor-em-6-de-fevereiro-conforme-deliberacao-da-antt/",
+      "https://www.openstreetmap.org/"
+    ],
+    "dicas_seguranca": [
+      "Paralelepipedo molhado em Ouro Preto, Tiradentes e Paraty - reduza a metade da velocidade em dias de chuva.",
+      "Descida da Serra da Bocaina (Cunha-Paraty) tem trechos sem guard-rail; nao desca a noite ou com neblina.",
+      "Postos espacados entre Sao Joao del-Rei e Campos do Jordao - encha o tanque sempre que possivel.",
+      "Cuidado com animais soltos (vacas e cavalos) no trecho rural do Sul de Minas, principalmente ao amanhecer."
     ]
   },
   {
@@ -264,13 +383,25 @@
       "longitude": -50.583611
     },
     "distancia_total_km": 184,
-    "total_pedagios_moto_reais": 0.00,
+    "total_pedagios_moto_reais": 5,
     "caracteristicas": {
       "tipo_pavimento": "asfalto",
       "nivel_curvas": "medio",
       "trecho_critico_sem_posto_km": 18
     },
-    "interconexoes_ids": ["rota-do-sol-rs", "serra-gaucha-rs"],
+    "pedagios_detalhados": [
+      {
+        "nome": "Praca ERS-235 (Rota Romantica)",
+        "valor_moto_reais": 5.00,
+        "sistema": "fisica",
+        "concessionaria": "EGR - Empresa Gaucha de Rodovias",
+        "fonte_url": "https://www.egr.rs.gov.br/ers-235"
+      }
+    ],
+    "interconexoes_ids": [
+      "rota-do-sol-rs",
+      "serra-gaucha-rs"
+    ],
     "pontos_apoio_homologados": [
       {
         "tipo": "restaurante",
@@ -309,12 +440,1102 @@
       }
     ],
     "polilinha_simplificada": [
-      {"lat": -29.760278, "lng": -51.147222},
-      {"lat": -29.690000, "lng": -51.130000},
-      {"lat": -29.376111, "lng": -51.116389},
-      {"lat": -29.379722, "lng": -50.876111},
-      {"lat": -29.365278, "lng": -50.811944},
-      {"lat": -29.448333, "lng": -50.583611}
+      {
+        "lat": -29.760278,
+        "lng": -51.147222
+      },
+      {
+        "lat": -29.69,
+        "lng": -51.13
+      },
+      {
+        "lat": -29.376111,
+        "lng": -51.116389
+      },
+      {
+        "lat": -29.379722,
+        "lng": -50.876111
+      },
+      {
+        "lat": -29.365278,
+        "lng": -50.811944
+      },
+      {
+        "lat": -29.448333,
+        "lng": -50.583611
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "alta",
+    "dificuldade": "iniciante",
+    "melhor_epoca": "Setembro a abril. Inverno (junho a agosto) traz neblina forte na serra de Gramado/Canela e madrugadas proximas de zero - evitar para iniciantes.",
+    "descricao_biker": "A Rota Romantica conecta a regiao metropolitana de Porto Alegre a Serra Gaucha pela RS-235, passando por colonias alemas e italianas antes de subir o ultimo trecho ate Sao Francisco de Paula. Sao 184 km de asfalto bem conservado, com curvas suaves e elevacao progressiva, otima para iniciantes ganharem confianca em serra sem o terror das ferraduras do Rio do Rastro. Trafego turistico pesado em alta temporada e em todo o mes de julho. Pontos de apoio sobrando: postos, cafes coloniais e mirantes a cada 15 a 25 km.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/RS-235",
+      "https://www.rotaromantica.com.br/",
+      "https://www.openstreetmap.org/",
+      "https://duasrodas.com.br/estradas/rota-romantica-rs"
+    ],
+    "dicas_seguranca": [
+      "Neblina densa nas manhas de inverno entre Nova Petropolis e Gramado - atrasar a saida ate o meio da manha ajuda.",
+      "Transito turistico pesado em julho (Festival de Cinema de Gramado): contar com lentidao no trecho urbano.",
+      "Atencao a animais soltos no trecho final (Canela - Sao Francisco de Paula), especialmente ao entardecer.",
+      "Postos abundantes mas evite deixar o tanque baixar de meio antes de Nova Petropolis aos domingos a noite."
+    ]
+  },
+  {
+    "rota_id": "subida-campos-do-jordao-sp-123-sp",
+    "nome_rota": "Subida de Campos do Jordao (SP-123 / Floriano Rodrigues Pinheiro)",
+    "estado_pais": "SP, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Taubate",
+      "latitude": -23.026389,
+      "longitude": -45.555556
+    },
+    "coordenada_fim": {
+      "cidade": "Campos do Jordao",
+      "latitude": -22.738889,
+      "longitude": -45.591111
+    },
+    "distancia_total_km": 47,
+    "total_pedagios_moto_reais": 0,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 30
+    },
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "estrada-real-caminho-velho-mg-sp-rj",
+      "rodovia-presidente-dutra-sp-rj",
+      "circuito-das-aguas-sp-340-sp"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Shell Taubate (entrada da SP-123)",
+        "latitude": -23.020833,
+        "longitude": -45.560278,
+        "descricao_biker": "Ultimo posto da Dutra antes do entroncamento com a SP-123, conveniencia 24h e ar comprimido, abasteca aqui pois nao ha postos na subida da serra."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante Pico do Itapeva",
+        "latitude": -22.704722,
+        "longitude": -45.527778,
+        "descricao_biker": "Ponto mais alto da regiao (2.030m), vista panoramica do Vale do Paraiba, estacionamento para motos em area sinalizada e parada classica de bikers."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Baden Baden Cervejaria (Capivari)",
+        "latitude": -22.7375,
+        "longitude": -45.591389,
+        "descricao_biker": "Ponto de encontro tradicional no centro de Capivari, estacionamento de motos na rua e movimento de grupos aos fins de semana."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Ipiranga Campos do Jordao (Abernessia)",
+        "latitude": -22.731944,
+        "longitude": -45.589444,
+        "descricao_biker": "Posto urbano em Campos do Jordao com conveniencia, ultimo abastecimento antes de partir para Sao Bento do Sapucai ou descer pela SP-50."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -23.026389,
+        "lng": -45.555556
+      },
+      {
+        "lat": -22.97,
+        "lng": -45.56
+      },
+      {
+        "lat": -22.9,
+        "lng": -45.555
+      },
+      {
+        "lat": -22.83,
+        "lng": -45.555
+      },
+      {
+        "lat": -22.78,
+        "lng": -45.57
+      },
+      {
+        "lat": -22.738889,
+        "lng": -45.591111
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "alta",
+    "dificuldade": "intermediario",
+    "melhor_epoca": "Marco a outubro. Evitar junho e julho: temperatura cai abaixo de 5C no topo, neblina densa pela manha e geadas pontuais deixam o asfalto escorregadio.",
+    "descricao_biker": "Sobe 1.300m de elevacao em 47 km de asfalto bem conservado da SP-123, conhecida como rodovia Floriano Rodrigues Pinheiro. E a porta de entrada classica para Campos do Jordao desde Taubate (saida da Dutra), com curvas medias bem desenhadas, faixas duplas em boa parte da subida e tres trechos de mirante natural. Tem trafego turistico pesado em julho (alta temporada) e nos feriadoes; aos sabados de manha o fluxo de subida e intenso. Pista boa para naked, sport-touring e big trail, e tranquila ate para piloto intermediario sem experiencia de serra. Combine com a SP-50 para descer por Sao Bento do Sapucai ou voltar pela mesma SP-123.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/Rodovia_Floriano_Rodrigues_Pinheiro",
+      "https://pt.wikipedia.org/wiki/Campos_do_Jord%C3%A3o",
+      "https://www.openstreetmap.org/"
+    ],
+    "dicas_seguranca": [
+      "Frio extremo de junho a agosto: temperatura no topo cai abaixo de 5C antes do meio-dia, leve roupa termica e luva de inverno.",
+      "Neblina frequente pela manha entre o km 25 e o km 40, especialmente em dias de virada de tempo.",
+      "Sem postos ativos no trecho serrano: abasteca em Taubate antes de subir, autonomia minima de 150 km recomendada.",
+      "Trafego turistico pesado nos sabados de manha em julho, evite ultrapassagens em curvas cegas."
+    ]
+  },
+  {
+    "rota_id": "caminho-do-mar-sp-148-sp",
+    "nome_rota": "Caminho do Mar / Estrada Velha de Santos (SP-148)",
+    "estado_pais": "SP, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Sao Bernardo do Campo",
+      "latitude": -23.738889,
+      "longitude": -46.564722
+    },
+    "coordenada_fim": {
+      "cidade": "Cubatao",
+      "latitude": -23.895833,
+      "longitude": -46.425833
+    },
+    "distancia_total_km": 35,
+    "total_pedagios_moto_reais": 0,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 20
+    },
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "rodovia-anchieta-sp",
+      "rodovia-imigrantes-sp",
+      "rio-santos-litoral-norte-sp"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Shell Riacho Grande (SBC)",
+        "latitude": -23.764722,
+        "longitude": -46.548333,
+        "descricao_biker": "Ultimo posto antes da descida da Serra do Mar pela SP-148, conveniencia 24h, ar comprimido e parada tradicional de motoclubes do ABC."
+      },
+      {
+        "tipo": "ponto_historico",
+        "nome": "Calcada do Lorena (trecho preservado)",
+        "latitude": -23.838333,
+        "longitude": -46.475833,
+        "descricao_biker": "Trecho de calcamento original do seculo XVIII na Serra do Mar, parada cultural com mirante para o Vale do Mogi, atencao ao piso de pedra escorregadio em dias de chuva."
+      },
+      {
+        "tipo": "ponto_historico",
+        "nome": "Vila de Paranapiacaba",
+        "latitude": -23.778611,
+        "longitude": -46.300833,
+        "descricao_biker": "Vila ferroviaria inglesa preservada (acesso via SP-122 a partir de Rio Grande da Serra), parada obrigatoria do roteiro biker, estacionamento gratuito no entorno da Estacao."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante Padre Anchieta (Serra do Mar)",
+        "latitude": -23.853611,
+        "longitude": -46.460278,
+        "descricao_biker": "Mirante da SP-148 com vista da Baixada Santista, estacionamento sinalizado e ponto de fotos classico no Caminho do Mar."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Curva da Serra (base de Cubatao)",
+        "latitude": -23.890278,
+        "longitude": -46.428611,
+        "descricao_biker": "Restaurante na base da serra com estacionamento de motos, parada tradicional dos grupos que sobem ou descem o Caminho do Mar aos domingos."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -23.738889,
+        "lng": -46.564722
+      },
+      {
+        "lat": -23.77,
+        "lng": -46.535
+      },
+      {
+        "lat": -23.81,
+        "lng": -46.5
+      },
+      {
+        "lat": -23.84,
+        "lng": -46.47
+      },
+      {
+        "lat": -23.87,
+        "lng": -46.445
+      },
+      {
+        "lat": -23.895833,
+        "lng": -46.425833
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "media",
+    "dificuldade": "intermediario",
+    "melhor_epoca": "Abril a setembro (seca). Evitar dezembro a marco: chuvas torrenciais fecham trechos da SP-148 com deslizamentos e o asfalto historico fica escorregadio.",
+    "descricao_biker": "Roteiro historico que recupera a antiga ligacao Sao Paulo-Santos pelo Caminho do Mar (SP-148), inaugurado em 1922 e tombado pelo IPHAN. Sao 35 km de asfalto antigo descendo 700m da Serra do Mar entre Sao Bernardo do Campo e Cubatao, atravessando trechos preservados da Calcada do Lorena e passando proximo a vila ferroviaria de Paranapiacaba (acessivel por desvio via SP-122). ATENCAO: a SP-148 esta oficialmente fechada para veiculos particulares desde 1985 e e administrada pelo Polo Ecoturistico Caminhos do Mar; embora bikers locais trafeguem o trajeto, va por sua conta e risco e respeite as restricoes do parque. Pista estreita de mao dupla, curvas fechadas e patrimonio rodoviario unico no Brasil. Ideal para passeio dominical lento, sem pretensao de velocidade.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/Rodovia_Caminho_do_Mar",
+      "https://pt.wikipedia.org/wiki/Paranapiacaba",
+      "https://pt.wikipedia.org/wiki/Cal%C3%A7ada_do_Lorena",
+      "https://caminhosdomar.com.br/sua-visita/",
+      "https://www.openstreetmap.org/"
+    ],
+    "dicas_seguranca": [
+      "Rota oficialmente fechada para veiculos particulares desde 1985 (Polo Ecoturistico Caminhos do Mar) - va por conta e risco.",
+      "Piso de pedra historico no trecho da Calcada do Lorena fica muito escorregadio com chuva, reduza velocidade pela metade.",
+      "Deslizamentos frequentes na Serra do Mar entre dezembro e marco, consulte boletim da SP-148 antes de subir.",
+      "Trecho com baixo sinal de celular entre o mirante Padre Anchieta e a base de Cubatao.",
+      "Acesso a Paranapiacaba pede desvio pela SP-122 (Rio Grande da Serra), nao ha conexao direta a partir da SP-148."
+    ]
+  },
+  {
+    "rota_id": "rodovia-dos-tamoios-sp-099-sp",
+    "nome_rota": "Rodovia dos Tamoios (SP-099)",
+    "estado_pais": "SP, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Sao Jose dos Campos",
+      "latitude": -23.179444,
+      "longitude": -45.886944
+    },
+    "coordenada_fim": {
+      "cidade": "Caraguatatuba",
+      "latitude": -23.620278,
+      "longitude": -45.412778
+    },
+    "distancia_total_km": 82,
+    "total_pedagios_moto_reais": 11.80,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 35
+    },
+    "pedagios_detalhados": [
+      {
+        "nome": "Praça de Jambeiro",
+        "km": 59,
+        "valor_moto_reais": 2.90,
+        "sistema": "fisica",
+        "concessionaria": "Concessionária Tamoios",
+        "fonte_url": "https://www23.concessionariatamoios.com.br/noticias/show/1906/atualizacao-tarifaria-dos-pedagios-da-rodovia-dos-tamoios-entra-em-vigor-no-proximo-dia-1?-de-julho="
+      },
+      {
+        "nome": "Praça de Paraibuna",
+        "km": 82,
+        "valor_moto_reais": 6.15,
+        "sistema": "fisica",
+        "concessionaria": "Concessionária Tamoios",
+        "fonte_url": "https://www23.concessionariatamoios.com.br/noticias/show/1906/atualizacao-tarifaria-dos-pedagios-da-rodovia-dos-tamoios-entra-em-vigor-no-proximo-dia-1?-de-julho="
+      },
+      {
+        "nome": "Free Flow Contorno Sul",
+        "km": 13.5,
+        "valor_moto_reais": 2.75,
+        "sistema": "free_flow",
+        "concessionaria": "Concessionária Tamoios",
+        "fonte_url": "https://freeflowtamoios.com.br/"
+      }
+    ],
+    "interconexoes_ids": [
+      "rodovia-presidente-dutra-sp-rj",
+      "rio-santos-litoral-norte-sp"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Graal Tamoios (Jambeiro)",
+        "latitude": -23.29,
+        "longitude": -45.7,
+        "descricao_biker": "Posto com conveniencia 24h, restaurante e ar comprimido na entrada do trecho planalto, parada classica de bikers que vao ao litoral norte."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante da Serra do Mar (Tamoios novo trecho)",
+        "latitude": -23.46,
+        "longitude": -45.53,
+        "descricao_biker": "Mirante oficial do novo trecho de planalto com vista da descida e do litoral de Caraguatatuba, estacionamento sinalizado e seguro para motos."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Ipiranga Caraguatatuba (entrada)",
+        "latitude": -23.610278,
+        "longitude": -45.42,
+        "descricao_biker": "Primeiro posto ao chegar ao litoral, abastecimento estrategico antes de seguir para Ubatuba ou Sao Sebastiao pela BR-101."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Cantinho do Mar (Caraguatatuba)",
+        "latitude": -23.625833,
+        "longitude": -45.413333,
+        "descricao_biker": "Restaurante de frutos do mar com estacionamento amplo, ponto de encontro tradicional de bikers vindos pela Tamoios."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -23.179444,
+        "lng": -45.886944
+      },
+      {
+        "lat": -23.24,
+        "lng": -45.8
+      },
+      {
+        "lat": -23.33,
+        "lng": -45.68
+      },
+      {
+        "lat": -23.43,
+        "lng": -45.56
+      },
+      {
+        "lat": -23.53,
+        "lng": -45.48
+      },
+      {
+        "lat": -23.620278,
+        "lng": -45.412778
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "alta",
+    "dificuldade": "intermediario",
+    "melhor_epoca": "Abril a novembro. Evitar dezembro a marco: chuvas fortes no trecho serrano podem fechar pistas e ha pico de trafego turistico no fim de ano.",
+    "descricao_biker": "A SP-099 e a ligacao moderna do Vale do Paraiba ao litoral norte de Sao Paulo, com 82 km entre Sao Jose dos Campos e Caraguatatuba. Apos as obras de duplicacao concluidas em 2022 (trecho de planalto e trecho de serra), tornou-se uma das melhores rodovias para moto do estado: asfalto novo, faixas duplas, sinalizacao excelente e tuneis modernos no descenso da Serra do Mar. O trecho de serra (novo) tem curvas amplas e bem desenhadas, com greide controlado. Possui 3 pracas de pedagio (Jambeiro R$ 2,90, Paraibuna R$ 6,15 e Free Flow Contorno Sul R$ 2,75 — valores moto pos-reajuste julho 2026); soma R$ 11,80 por sentido, R$ 23,60 no round-trip. Pico de trafego nos sabados de manha no verao. Ideal para sport-touring e big trail, perfeitamente segura para iniciantes que ja tenham experiencia de serra suave.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/Rodovia_dos_Tamoios",
+      "https://www23.concessionariatamoios.com.br/para-voce/pedagio",
+      "https://www23.concessionariatamoios.com.br/noticias/show/1906/atualizacao-tarifaria-dos-pedagios-da-rodovia-dos-tamoios-entra-em-vigor-no-proximo-dia-1?-de-julho=",
+      "https://freeflowtamoios.com.br/",
+      "https://sindivapa.com.br/reajuste-nos-pedagios-das-rodovias-do-vale-do-paraiba-comeca-a-valer-em-julho-de-2025-4430",
+      "https://www.openstreetmap.org/"
+    ],
+    "dicas_seguranca": [
+      "Pedagio Free Flow do Contorno Sul cobra a placa da moto via leitura otica - pague em ate 30 dias pelo App Tamoios ou voce recebe multa.",
+      "Pico de trafego nos sabados de manha de dezembro a marco: saia antes das 6h ou depois das 11h para evitar congestionamento na descida.",
+      "Tuneis do novo trecho de serra exigem farol aceso em qualquer horario por regulamentacao.",
+      "Vento lateral forte no trecho de planalto entre Jambeiro e o inicio da serra, atencao com bagageiro alto.",
+      "Radares fixos em varios pontos do trecho de planalto, mantenha 100 km/h."
+    ]
+  },
+  {
+    "rota_id": "rio-santos-litoral-norte-sp",
+    "nome_rota": "Rio-Santos Litoral Norte (BR-101 / SP-055)",
+    "estado_pais": "SP, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Bertioga",
+      "latitude": -23.853611,
+      "longitude": -46.140833
+    },
+    "coordenada_fim": {
+      "cidade": "Ubatuba",
+      "latitude": -23.434167,
+      "longitude": -45.083889
+    },
+    "distancia_total_km": 175,
+    "total_pedagios_moto_reais": 0,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 25
+    },
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "rodovia-dos-tamoios-sp-099-sp",
+      "cunha-paraty-sp-171-rj-165-sp-rj",
+      "caminho-do-mar-sp-148-sp"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Shell Bertioga (centro)",
+        "latitude": -23.851944,
+        "longitude": -46.138611,
+        "descricao_biker": "Posto urbano em Bertioga, abastecimento estrategico antes de pegar a SP-055 sentido norte com trechos longos sem rede de conveniencia."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante Praia do Camburi (Sao Sebastiao)",
+        "latitude": -23.7625,
+        "longitude": -45.745278,
+        "descricao_biker": "Mirante na curva da SP-055 com vista da praia de Camburi e ilhas, estacionamento estreito mas seguro fora do horario de pico."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Ipiranga Maresias",
+        "latitude": -23.797222,
+        "longitude": -45.5575,
+        "descricao_biker": "Posto no centro de Maresias com conveniencia ampla e estacionamento de motos, ponto medio classico para parada na descida do litoral norte."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Cigana (Boicucanga)",
+        "latitude": -23.793056,
+        "longitude": -45.633056,
+        "descricao_biker": "Restaurante a beira da SP-055 com prato feito e frutos do mar, estacionamento de motos e ponto tradicional de motoclubes do Vale e ABC."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante Praia do Felix (Ubatuba sul)",
+        "latitude": -23.49,
+        "longitude": -45.15,
+        "descricao_biker": "Mirante natural na curva da SP-055 com vista da costa sul de Ubatuba, parada gratuita e relativamente segura para fotos."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -23.853611,
+        "lng": -46.140833
+      },
+      {
+        "lat": -23.81,
+        "lng": -45.9
+      },
+      {
+        "lat": -23.795,
+        "lng": -45.7
+      },
+      {
+        "lat": -23.78,
+        "lng": -45.55
+      },
+      {
+        "lat": -23.62,
+        "lng": -45.41
+      },
+      {
+        "lat": -23.52,
+        "lng": -45.25
+      },
+      {
+        "lat": -23.434167,
+        "lng": -45.083889
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "alta",
+    "dificuldade": "intermediario",
+    "melhor_epoca": "Abril a novembro. Evitar dezembro a marco: trafego turistico saturado, ja houve fechamentos por deslizamento entre Bertioga e Sao Sebastiao.",
+    "descricao_biker": "Trecho paulista da BR-101 (rodovia Rio-Santos, SP-055) entre Bertioga e Ubatuba: 175 km de asfalto colado no mar com centenas de curvas, atravessando Sao Sebastiao, Maresias, Boicucanga e Caraguatatuba. E o passeio costeiro classico do sudeste, com paisagem de praias urbanas e selvagens, dezenas de mirantes e travessia de balsa em Sao Sebastiao (sem custo para motos). Pista de mao dupla estreita em muitos pontos, com curvas em ferradura, lombadas no trecho urbano e pavimento variando de excelente a remendado. Tradicionalmente saturada nos fins de semana de verao. Ideal para naked e sport-touring; com touring grande pesado exige atencao nas ferraduras. Motos sao ISENTAS de pedagio em todo o trecho SP da concessao Novo Litoral / CNL (SP-055 + BR-101 trecho SP), confirmado oficialmente.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/BR-101",
+      "https://pt.wikipedia.org/wiki/Rodovia_Rio-Santos",
+      "https://novolitoral.com.br/pedagio-eletronico/",
+      "https://blog.semparar.com.br/free-flow-novo-litoral-cnl/",
+      "https://www.openstreetmap.org/"
+    ],
+    "dicas_seguranca": [
+      "Travessia da balsa Sao Sebastiao-Ilhabela e o gargalo: nao pega balsa no caminho costeiro, mas a fila pode bloquear a SP-055 no centro de Sao Sebastiao em alta temporada.",
+      "Ciclistas e pedestres na pista no trecho urbano de Maresias e Boicucanga, especialmente ao entardecer.",
+      "Curvas cegas com brita seca nas margens entre Camburi e Boissucanga, evite raspar pedal no apex.",
+      "Pico de assaltos historicamente em pontos isolados entre Caraguatatuba e Ubatuba a noite, evite trafego apos as 22h."
+    ]
+  },
+  {
+    "rota_id": "cunha-paraty-sp-171-rj-165-sp-rj",
+    "nome_rota": "Cunha-Paraty (SP-171 / RJ-165)",
+    "estado_pais": "SP/RJ, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Cunha",
+      "latitude": -23.073889,
+      "longitude": -44.957222
+    },
+    "coordenada_fim": {
+      "cidade": "Paraty",
+      "latitude": -23.220278,
+      "longitude": -44.713056
+    },
+    "distancia_total_km": 50,
+    "total_pedagios_moto_reais": 0,
+    "caracteristicas": {
+      "tipo_pavimento": "misto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 40
+    },
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "estrada-real-caminho-velho-mg-sp-rj",
+      "rio-santos-litoral-norte-sp",
+      "serra-da-bocaina-sp-rj"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto BR Cunha (centro)",
+        "latitude": -23.074722,
+        "longitude": -44.958611,
+        "descricao_biker": "Ultimo posto antes da descida da Serra da Bocaina, abasteca o tanque cheio pois nao ha postos ate Paraty (45 km de descenso tecnico)."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante da Serra da Bocaina (descida)",
+        "latitude": -23.15,
+        "longitude": -44.83,
+        "descricao_biker": "Mirante natural com vista da baia de Paraty na descida, estacionamento estreito a beira da RJ-165, parada rapida para fotos."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Banana da Terra (Paraty centro)",
+        "latitude": -23.218333,
+        "longitude": -44.715,
+        "descricao_biker": "Restaurante tradicional em Paraty, estacionamento de motos no entorno (pago) e parada gastronomica obrigatoria ao fim da descida."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Shell Paraty (entrada BR-101)",
+        "latitude": -23.221944,
+        "longitude": -44.708611,
+        "descricao_biker": "Primeiro posto em Paraty ao chegar pela RJ-165, conveniencia e ar comprimido, abastecimento estrategico antes de seguir pela BR-101 sentido norte ou sul."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -23.073889,
+        "lng": -44.957222
+      },
+      {
+        "lat": -23.1,
+        "lng": -44.91
+      },
+      {
+        "lat": -23.15,
+        "lng": -44.83
+      },
+      {
+        "lat": -23.19,
+        "lng": -44.77
+      },
+      {
+        "lat": -23.21,
+        "lng": -44.73
+      },
+      {
+        "lat": -23.220278,
+        "lng": -44.713056
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "media",
+    "dificuldade": "avancado",
+    "melhor_epoca": "Maio a setembro (seca). Evitar dezembro a marco: chuvas fortes deixam o asfalto antigo escorregadio e ha trechos com piso degradado.",
+    "descricao_biker": "Descida classica e tecnica da Serra da Bocaina de Cunha (SP) ate Paraty (RJ), 50 km divididos em dois pavimentos distintos: o lado SP (SP-171) e asfalto bem cuidado com curvas amplas; o lado RJ (RJ-165, ultimos 21 km) e PARALELEPIPEDO/CALCAMENTO em vez de asfalto - cobblestone foi a solucao adotada pelo governo RJ para preservar a permeabilidade do solo dentro da area de protecao ambiental. O calcamento muda completamente a dirigibilidade: piso desigual, ruim com chuva, vibracao constante e velocidade tipica abaixo de 40 km/h no trecho RJ. Sem pedagio para motos. Trafego baixo durante a semana. Ideal para big trail; sport-touring sofre na descida RJ. Combine com Paraty-Trindade ou Paraty-Ubatuba pela BR-101.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/RJ-165",
+      "https://pt.wikipedia.org/wiki/Rodovia_Paulo_Virg%C3%ADnio_e_Salvador_Pacetti",
+      "https://www.correiodamanha.com.br/correio-sul-fluminense/regiao-do-vale/2024/04/amp/126744-rj-165-estrada-cunha-paraty-esta-em-estado-precario.html",
+      "https://pt.wikipedia.org/wiki/Paraty",
+      "https://www.openstreetmap.org/"
+    ],
+    "dicas_seguranca": [
+      "Ultimos 21 km no lado RJ (RJ-165) sao PARALELEPIPEDO, nao asfalto - piso vibratorio, escorregadio com chuva, exige reducao drastica de velocidade.",
+      "Sem postos no trecho serrano, abasteca em Cunha antes de descer (autonomia minima de 100 km).",
+      "Cuidado com caminhoes e onibus no sentido subida em horario comercial, pista estreita nao permite ultrapassagem facil.",
+      "Neblina pode descer a tarde no trecho mais alto, principalmente em maio e junho.",
+      "Sport-touring com pneus de baixo perfil sofre no calcamento - prefira pneus mistos/trail."
+    ]
+  },
+  {
+    "rota_id": "petropolis-teresopolis-br-495-rj",
+    "nome_rota": "Petropolis-Teresopolis (BR-495)",
+    "estado_pais": "RJ, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Petropolis",
+      "latitude": -22.510833,
+      "longitude": -43.176944
+    },
+    "coordenada_fim": {
+      "cidade": "Teresopolis",
+      "latitude": -22.4125,
+      "longitude": -42.965833
+    },
+    "distancia_total_km": 38,
+    "total_pedagios_moto_reais": 0,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 25
+    },
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "br-040-rj",
+      "br-116-rj"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Shell Petropolis (Itaipava)",
+        "latitude": -22.435,
+        "longitude": -43.14,
+        "descricao_biker": "Posto em Itaipava com conveniencia 24h, area coberta para motos e parada classica antes de pegar a BR-495 sentido Teresopolis."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante Vale das Videiras",
+        "latitude": -22.45,
+        "longitude": -43.05,
+        "descricao_biker": "Mirante natural com vista do Vale das Videiras na BR-495, estacionamento sinalizado e parada cenica tradicional."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Italiano Bistro do Vale (Vale das Videiras)",
+        "latitude": -22.455,
+        "longitude": -43.045,
+        "descricao_biker": "Restaurante italiano tradicional na BR-495, estacionamento amplo e movimento de bikers aos fins de semana."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Ipiranga Teresopolis (Varzea)",
+        "latitude": -22.416389,
+        "longitude": -42.970833,
+        "descricao_biker": "Posto na entrada de Teresopolis pelo bairro da Varzea, ar comprimido e conveniencia, abastecimento ao fim da BR-495."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -22.510833,
+        "lng": -43.176944
+      },
+      {
+        "lat": -22.475,
+        "lng": -43.15
+      },
+      {
+        "lat": -22.45,
+        "lng": -43.08
+      },
+      {
+        "lat": -22.435,
+        "lng": -43.04
+      },
+      {
+        "lat": -22.42,
+        "lng": -42.995
+      },
+      {
+        "lat": -22.4125,
+        "lng": -42.965833
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "baixa",
+    "dificuldade": "intermediario",
+    "melhor_epoca": "Marco a novembro quando aberta. Verifique status antes de partir: BR-495 esteve interditada em 2026 por deslizamento.",
+    "descricao_biker": "Ligacao classica entre as duas serras imperiais do Rio pela BR-495: 38 km de asfalto sinuoso da Mantiqueira fluminense atravessando o Vale das Videiras e o Vale do Cuiaba. ATENCAO: a BR-495 esta interditada desde 23 de fevereiro de 2026 (pista cedeu no km 22), sem prazo de reabertura segundo DNIT - verifique status atual antes de viajar. Quando aberta, e considerada uma das piores rodovias federais do RJ pela quantidade de curvas cegas, ausencia de acostamento e neblina. Sem pedagio para motos. Trafego turistico pesado aos fins de semana. Ideal para passeio dominical com paradas em mirantes, cafes coloniais e pousadas de Itaipava e Vale das Videiras.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/BR-495",
+      "https://diariodepetropolis.com.br/integra/interdicao-da-br-495-pesa-no-bolso-e-triplica-tempo-de-viagem-entre-petropolis-e-teresopolis-40624",
+      "https://estradas.com.br/estudo-aponta-estrada-que-liga-petropolis-a-teresopolis-rj-como-uma-das-piores-rodovias-do-estado/",
+      "https://pt.wikipedia.org/wiki/Petr%C3%B3polis",
+      "https://pt.wikipedia.org/wiki/Teres%C3%B3polis"
+    ],
+    "dicas_seguranca": [
+      "BR-495 interditada desde 23/02/2026 sem prazo de reabertura (DNIT) - confirme status antes de planejar a viagem.",
+      "Regiao serrana do Rio teve deslizamentos historicos em 2011 e 2022, evite circular sob chuva forte ou alerta meteorologico.",
+      "Neblina densa frequente nas manhas de inverno entre Itaipava e Vale das Videiras.",
+      "Trafego pesado no domingo a tarde no sentido Rio: prefira retornar pela manha ou pelo inicio da tarde.",
+      "Sem acostamento e poucos pontos de recuo, ultrapassagens arriscadas - paciencia obrigatoria."
+    ]
+  },
+  {
+    "rota_id": "visconde-de-maua-itatiaia-rj-163-rj",
+    "nome_rota": "Visconde de Maua / Itatiaia (RJ-163)",
+    "estado_pais": "RJ, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Resende",
+      "latitude": -22.469722,
+      "longitude": -44.446944
+    },
+    "coordenada_fim": {
+      "cidade": "Visconde de Maua",
+      "latitude": -22.345556,
+      "longitude": -44.546111
+    },
+    "distancia_total_km": 33,
+    "total_pedagios_moto_reais": 0,
+    "caracteristicas": {
+      "tipo_pavimento": "misto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 28
+    },
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "rodovia-presidente-dutra-sp-rj",
+      "estrada-real-caminho-velho-mg-sp-rj"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Shell Resende (saida Dutra)",
+        "latitude": -22.475,
+        "longitude": -44.445,
+        "descricao_biker": "Posto na saida da Dutra para Resende, conveniencia 24h e abastecimento obrigatorio antes da subida da Mantiqueira pela RJ-163."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante da Pedra Selada (RJ-163)",
+        "latitude": -22.38,
+        "longitude": -44.51,
+        "descricao_biker": "Mirante natural com vista da Pedra Selada na subida da serra, estacionamento na curva da RJ-163, atencao ao acostamento estreito."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Maromba (Visconde de Maua)",
+        "latitude": -22.3425,
+        "longitude": -44.540833,
+        "descricao_biker": "Restaurante tradicional na Vila de Maromba, estacionamento de motos e ponto de encontro de bikers nos fins de semana de inverno."
+      },
+      {
+        "tipo": "hotel",
+        "nome": "Pousadas da Vila de Maua (concentracao)",
+        "latitude": -22.345833,
+        "longitude": -44.546389,
+        "descricao_biker": "Concentracao de pousadas no centro de Visconde de Maua com estacionamento privativo para motos, reserva antecipada nos meses de inverno (junho a agosto)."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -22.469722,
+        "lng": -44.446944
+      },
+      {
+        "lat": -22.44,
+        "lng": -44.46
+      },
+      {
+        "lat": -22.41,
+        "lng": -44.485
+      },
+      {
+        "lat": -22.38,
+        "lng": -44.51
+      },
+      {
+        "lat": -22.36,
+        "lng": -44.53
+      },
+      {
+        "lat": -22.345556,
+        "lng": -44.546111
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "media",
+    "dificuldade": "intermediario",
+    "melhor_epoca": "Abril a outubro. O inverno (junho a agosto) e a melhor epoca pelo clima frio caracteristico da Mantiqueira, mas exige roupa termica.",
+    "descricao_biker": "Subida da RJ-163 (Rodovia Rubens Tramujas Mader) da Dutra (km 311, entre Resende e Itatiaia) ate o distrito de Visconde de Maua na Serra da Mantiqueira. Sao 29 km asfaltados ate a Vila de Maua, mais 5 km asfaltados ate Maringa, e ULTIMOS 3 km em ESTRADA DE TERRA ate Maromba. Subida de 600m de elevacao com curvas em ferradura na parte alta e vista da Pedra Selada e Parque Nacional do Itatiaia. Unico posto de gasolina da regiao fica em Visconde de Maua. Trafego turistico concentrado em fins de semana de inverno (festival gastronomico de Maua julho-agosto). Pista estreita de mao dupla, sem acostamento na maior parte do trecho serrano. Ideal para big trail; sport-touring sofre nos 3 km de terra ate Maromba.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/Visconde_de_Mau%C3%A1_(Resende)",
+      "https://pt.wikipedia.org/wiki/Parque_Nacional_do_Itatiaia",
+      "https://www.viscondedemaua.com.br/post/como-chegar-em-visconde-de-maua/",
+      "https://www.openstreetmap.org/"
+    ],
+    "dicas_seguranca": [
+      "Ultimos 3 km entre Maringa e Maromba sao ESTRADA DE TERRA - pista escorregadia com chuva, sport-touring sofre.",
+      "Temperaturas abaixo de 5C no inverno entre Maromba e Maringa, leve roupa termica e luva de inverno.",
+      "Unico posto de gasolina fica em Visconde de Maua centro - abasteca em Resende antes de subir (autonomia minima 100 km).",
+      "Asfalto irregular em pontos especificos entre o km 15 e o km 25 da subida.",
+      "Animais soltos (vacas) no trecho rural entre Maromba e Maringa, especialmente ao amanhecer."
+    ]
+  },
+  {
+    "rota_id": "serra-da-bocaina-sao-jose-do-barreiro-sp-rj",
+    "nome_rota": "Serra da Bocaina (Sao Jose do Barreiro / Bananal)",
+    "estado_pais": "SP/RJ, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Sao Jose do Barreiro",
+      "latitude": -22.643889,
+      "longitude": -44.578889
+    },
+    "coordenada_fim": {
+      "cidade": "Bananal",
+      "latitude": -22.683056,
+      "longitude": -44.323611
+    },
+    "distancia_total_km": 60,
+    "total_pedagios_moto_reais": 0,
+    "caracteristicas": {
+      "tipo_pavimento": "misto",
+      "nivel_curvas": "alto",
+      "trecho_critico_sem_posto_km": 45
+    },
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "estrada-real-caminho-velho-mg-sp-rj",
+      "cunha-paraty-sp-171-rj-165-sp-rj"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Sao Jose do Barreiro (centro)",
+        "latitude": -22.642778,
+        "longitude": -44.58,
+        "descricao_biker": "Posto unico no centro de Sao Jose do Barreiro, abasteca o tanque cheio antes de subir a Bocaina pois nao ha postos no trecho serrano."
+      },
+      {
+        "tipo": "ponto_historico",
+        "nome": "Trilha do Ouro (acesso Bocaina)",
+        "latitude": -22.73,
+        "longitude": -44.47,
+        "descricao_biker": "Trilha historica colonial do ciclo do cafe, ponto de parada cultural com estacionamento de motos na portaria do Parque Nacional da Bocaina."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante da Serra da Bocaina (parte alta)",
+        "latitude": -22.7,
+        "longitude": -44.5,
+        "descricao_biker": "Mirante natural a 1.500m de altitude com vista do Vale do Paraiba, estacionamento em terra batida e ponto cenico classico do roteiro."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Bananal (centro)",
+        "latitude": -22.682222,
+        "longitude": -44.322222,
+        "descricao_biker": "Posto unico em Bananal, abastecimento ao final do roteiro antes de pegar a BR-116 sentido Volta Redonda ou retornar pela mesma estrada."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -22.643889,
+        "lng": -44.578889
+      },
+      {
+        "lat": -22.69,
+        "lng": -44.55
+      },
+      {
+        "lat": -22.72,
+        "lng": -44.5
+      },
+      {
+        "lat": -22.72,
+        "lng": -44.43
+      },
+      {
+        "lat": -22.7,
+        "lng": -44.38
+      },
+      {
+        "lat": -22.683056,
+        "lng": -44.323611
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "baixa",
+    "dificuldade": "avancado",
+    "melhor_epoca": "Maio a setembro (seca). Evitar dezembro a marco: o trecho de terra do Parque Nacional da Bocaina vira atoleiro com chuva forte e fica intransitavel para motos de rua.",
+    "descricao_biker": "Roteiro classico de big trail no Parque Nacional da Serra da Bocaina entre Sao Jose do Barreiro (SP) e Bananal (SP), passando por trechos de terra batida no interior do parque. 60 km de pavimento misto: asfalto irregular nas cidades, terra batida e cascalho no trecho serrano alto. E uma das rotas mais selvagens do roteiro biker do sudeste, com vista de pico, trechos de fazenda historica do ciclo do cafe e altitude alta (1.500m). Exige big trail ou dual-sport com pneu adequado; nao recomendado para sport-touring ou naked. Sem pedagio. Sem cobertura de celular na maior parte do trecho. Confiabilidade baixa: condicoes do trecho de terra variam muito conforme estacao e ultimas chuvas, confirme localmente antes de fechar planejamento.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/Parque_Nacional_da_Serra_da_Bocaina",
+      "https://pt.wikipedia.org/wiki/S%C3%A3o_Jos%C3%A9_do_Barreiro",
+      "https://pt.wikipedia.org/wiki/Banan_al"
+    ],
+    "dicas_seguranca": [
+      "Trecho de terra batida no interior do Parque Nacional vira atoleiro com chuva forte, consulte condicoes locais antes.",
+      "Sem cobertura de celular na maior parte do trecho serrano, comunique itinerario a contato externo.",
+      "Sem postos no trecho do parque, autonomia minima de 200 km recomendada.",
+      "Pneu de rua puro nao recomendado, exige misto (50/50) ou off-road (70/30)."
+    ]
+  },
+  {
+    "rota_id": "circuito-das-aguas-sp-340-sp",
+    "nome_rota": "Circuito das Aguas Paulista (SP-340 / SP-352)",
+    "estado_pais": "SP, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Amparo",
+      "latitude": -22.701389,
+      "longitude": -46.768056
+    },
+    "coordenada_fim": {
+      "cidade": "Aguas de Lindoia",
+      "latitude": -22.4775,
+      "longitude": -46.633056
+    },
+    "distancia_total_km": 45,
+    "total_pedagios_moto_reais": 0,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "medio",
+      "trecho_critico_sem_posto_km": 18
+    },
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "rodovia-dom-pedro-i-sp",
+      "subida-campos-do-jordao-sp-123-sp"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Shell Amparo (centro)",
+        "latitude": -22.7,
+        "longitude": -46.77,
+        "descricao_biker": "Posto urbano em Amparo com conveniencia, ar comprimido e parada de partida tradicional do circuito."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Recanto Suico (Serra Negra)",
+        "latitude": -22.6125,
+        "longitude": -46.700278,
+        "descricao_biker": "Restaurante tradicional com fondue e estacionamento amplo para motos, parada classica de motoclubes paulistanos."
+      },
+      {
+        "tipo": "mirante",
+        "nome": "Mirante do Cristo (Serra Negra)",
+        "latitude": -22.616944,
+        "longitude": -46.706944,
+        "descricao_biker": "Mirante religioso com vista panoramica de Serra Negra e estacionamento amplo gratuito."
+      },
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Ipiranga Aguas de Lindoia",
+        "latitude": -22.475,
+        "longitude": -46.63,
+        "descricao_biker": "Posto na entrada de Aguas de Lindoia, abastecimento ao final do circuito antes de seguir para Socorro, Bragancia ou retornar."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -22.701389,
+        "lng": -46.768056
+      },
+      {
+        "lat": -22.66,
+        "lng": -46.73
+      },
+      {
+        "lat": -22.615,
+        "lng": -46.705
+      },
+      {
+        "lat": -22.57,
+        "lng": -46.685
+      },
+      {
+        "lat": -22.52,
+        "lng": -46.65
+      },
+      {
+        "lat": -22.4775,
+        "lng": -46.633056
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "alta",
+    "dificuldade": "iniciante",
+    "melhor_epoca": "Marco a outubro. Verao (dezembro a fevereiro) traz chuvas de tarde que podem encharcar trechos urbanos sem boa drenagem.",
+    "descricao_biker": "Circuito turistico classico do interior paulista entre Amparo, Serra Negra e Aguas de Lindoia (SP-340/SP-352): 45 km de asfalto bem conservado com curvas suaves e elevacao moderada da Serra da Mantiqueira paulista. Rota ideal para iniciantes ganharem confianca em curvas, com infraestrutura de cafes coloniais, restaurantes suicos e pousadas em todo o trajeto. Sem pedagio para motos. Trafego turistico pesado nos fins de semana, especialmente de motoclubes paulistanos no domingo de manha. Combine com Socorro (SP-008) para um circuito mais longo ou suba ate Bragancia e pegue a Bandeirantes (com pedagio na volta). Otima para naked, scooter de cilindrada e sport-touring leve.",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/Circuito_das_%C3%81guas_Paulista",
+      "https://pt.wikipedia.org/wiki/Serra_Negra_(S%C3%A3o_Paulo)",
+      "https://pt.wikipedia.org/wiki/%C3%81guas_de_Lind%C3%B3ia",
+      "https://www.openstreetmap.org/"
+    ],
+    "dicas_seguranca": [
+      "Trafego de motoclubes intenso aos domingos de manha entre Amparo e Serra Negra, mantenha distancia de seguranca em grupos grandes.",
+      "Lombadas urbanas mal sinalizadas em Serra Negra e Lindoia, reduza velocidade ao entrar nas cidades.",
+      "Trecho rural entre Serra Negra e Lindoia tem animais soltos (vacas e cavalos), atencao ao amanhecer.",
+      "Asfalto pode estar molhado em sombra de mata entre Amparo e Serra Negra mesmo apos dia de sol."
+    ]
+  },
+  {
+    "rota_id": "roteiro-do-vinho-sao-roque-sp-029-sp",
+    "nome_rota": "Roteiro do Vinho de Sao Roque (SP-029 / Estrada do Vinho)",
+    "estado_pais": "SP, Brasil",
+    "coordenada_inicio": {
+      "cidade": "Sao Roque",
+      "latitude": -23.528611,
+      "longitude": -47.135278
+    },
+    "coordenada_fim": {
+      "cidade": "Sao Roque (Canguera)",
+      "latitude": -23.58,
+      "longitude": -47.08
+    },
+    "distancia_total_km": 22,
+    "total_pedagios_moto_reais": 0,
+    "caracteristicas": {
+      "tipo_pavimento": "asfalto",
+      "nivel_curvas": "medio",
+      "trecho_critico_sem_posto_km": 15
+    },
+    "pedagios_detalhados": [],
+    "interconexoes_ids": [
+      "rodovia-castello-branco-sp",
+      "rodovia-raposo-tavares-sp"
+    ],
+    "pontos_apoio_homologados": [
+      {
+        "tipo": "posto_gasolina",
+        "nome": "Posto Shell Sao Roque (centro)",
+        "latitude": -23.5275,
+        "longitude": -47.134722,
+        "descricao_biker": "Posto urbano em Sao Roque na saida para a Estrada do Vinho, conveniencia 24h e ponto de partida tradicional do roteiro."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Restaurante Quinta do Olivardo (SP-029)",
+        "latitude": -23.555,
+        "longitude": -47.11,
+        "descricao_biker": "Vinicola e restaurante tradicional na Estrada do Vinho com estacionamento amplo, parada classica de motoclubes paulistanos aos sabados."
+      },
+      {
+        "tipo": "restaurante",
+        "nome": "Cantina Sao Pedro (SP-029)",
+        "latitude": -23.565,
+        "longitude": -47.095,
+        "descricao_biker": "Cantina italiana com vinho colonial e estacionamento de motos, ponto de encontro tradicional nos sabados a tarde."
+      },
+      {
+        "tipo": "ponto_historico",
+        "nome": "Vinicola Goes (Canguera)",
+        "latitude": -23.578889,
+        "longitude": -47.080833,
+        "descricao_biker": "Vinicola centenaria com tour e estacionamento de motos, parada cultural ao final do roteiro do vinho."
+      }
+    ],
+    "polilinha_simplificada": [
+      {
+        "lat": -23.528611,
+        "lng": -47.135278
+      },
+      {
+        "lat": -23.545,
+        "lng": -47.12
+      },
+      {
+        "lat": -23.555,
+        "lng": -47.11
+      },
+      {
+        "lat": -23.565,
+        "lng": -47.095
+      },
+      {
+        "lat": -23.575,
+        "lng": -47.085
+      },
+      {
+        "lat": -23.58,
+        "lng": -47.08
+      }
+    ],
+    "ultima_revisao": "2026-05-22",
+    "confiabilidade": "alta",
+    "dificuldade": "iniciante",
+    "melhor_epoca": "Marco a outubro. Verao (dezembro a marco) traz chuvas de tarde que podem encharcar a SP-029 em trechos sem drenagem.",
+    "descricao_biker": "Roteiro turistico curto de 22 km na SP-029 entre o centro de Sao Roque e o bairro rural de Canguera, conhecido como Estrada do Vinho. Tem vinicolas centenarias de imigrantes italianos, cantinas, queijarias e restaurantes coloniais ao longo do trajeto, com asfalto de qualidade media e curvas suaves. E o passeio dominical mais curto e classico de motoclubes paulistanos, ideal para iniciantes e como pre-passeio antes de subir a SP-280 sentido Castelo. Sem pedagio. Trafego turistico saturado aos sabados a tarde e domingos de manha, especialmente entre Pirassununga e Canguera. Nao confunda com a rota maior do Vinho de Andradas/Sao Joao da Boa Vista (MG/SP).",
+    "fontes_dados": [
+      "https://pt.wikipedia.org/wiki/S%C3%A3o_Roque",
+      "https://pt.wikipedia.org/wiki/Roteiro_do_Vinho",
+      "https://www.openstreetmap.org/"
+    ],
+    "dicas_seguranca": [
+      "Trafego pesado de carros turisticos aos sabados a tarde, reduza velocidade e cuidado com aberturas de porta em estacionamentos a beira da via.",
+      "Algumas vinicolas tem entradas curtas direto da rodovia, atencao a freadas bruscas de carros a frente.",
+      "Lombadas mal sinalizadas no trecho rural, principalmente proximo a Canguera.",
+      "Nao consuma bebida alcoolica nas vinicolas se voce e o piloto, lei seca rigorosa na SP-029 com fiscalizacao em fins de semana."
     ]
   }
 ]

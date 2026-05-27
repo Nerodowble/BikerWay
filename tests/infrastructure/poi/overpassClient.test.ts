@@ -135,6 +135,98 @@ describe('overpassClient — per-category query shape', () => {
     expect(unnamed?.name).toBe('Borracheiro');
   });
 
+  it('restaurante category unions amenity=restaurant + fast_food (F31)', async () => {
+    const client = createOverpassClient({ minIntervalMs: 0 });
+    const fetchMock = jest.fn().mockResolvedValue(
+      makeResponse([
+        {
+          type: 'node',
+          id: 30,
+          lat: -23.55,
+          lon: -46.65,
+          tags: { amenity: 'restaurant', name: 'Bistro do Vale' },
+        },
+        {
+          type: 'way',
+          id: 31,
+          center: { lat: -23.56, lon: -46.66 },
+          tags: { amenity: 'fast_food' },
+        },
+      ]),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await client.fetchPoisInBox(BBOX, 'restaurante');
+
+    const query = capturedQuery(fetchMock, 0);
+    expect(query).toContain('["amenity"="restaurant"]');
+    expect(query).toContain('["amenity"="fast_food"]');
+
+    expect(result).toHaveLength(2);
+    expect(result.every((p) => p.category === 'restaurante')).toBe(true);
+    expect(result.find((p) => p.id === 'node-30')?.name).toBe('Bistro do Vale');
+    expect(result.find((p) => p.id === 'way-31')?.name).toBe('Restaurante');
+  });
+
+  it('hotel category unions tourism=hotel + tourism=motel (F31)', async () => {
+    const client = createOverpassClient({ minIntervalMs: 0 });
+    const fetchMock = jest.fn().mockResolvedValue(
+      makeResponse([
+        {
+          type: 'node',
+          id: 40,
+          lat: -23.55,
+          lon: -46.65,
+          tags: { tourism: 'hotel', name: 'Hotel Central' },
+        },
+      ]),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await client.fetchPoisInBox(BBOX, 'hotel');
+
+    const query = capturedQuery(fetchMock, 0);
+    expect(query).toContain('["tourism"="hotel"]');
+    expect(query).toContain('["tourism"="motel"]');
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.category).toBe('hotel');
+    expect(result[0]?.name).toBe('Hotel Central');
+  });
+
+  it('pousada category unions tourism=guest_house + hostel (F31)', async () => {
+    const client = createOverpassClient({ minIntervalMs: 0 });
+    const fetchMock = jest.fn().mockResolvedValue(
+      makeResponse([
+        {
+          type: 'node',
+          id: 50,
+          lat: -23.55,
+          lon: -46.65,
+          tags: { tourism: 'guest_house', name: 'Pousada do Vale' },
+        },
+        {
+          type: 'way',
+          id: 51,
+          center: { lat: -23.56, lon: -46.66 },
+          tags: { tourism: 'hostel' },
+        },
+      ]),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await client.fetchPoisInBox(BBOX, 'pousada');
+
+    const query = capturedQuery(fetchMock, 0);
+    expect(query).toContain('["tourism"="guest_house"]');
+    expect(query).toContain('["tourism"="hostel"]');
+
+    expect(result).toHaveLength(2);
+    expect(result.every((p) => p.category === 'pousada')).toBe(true);
+    // Sem name e sem brand — fallback localizado.
+    expect(result.find((p) => p.id === 'way-51')?.name).toBe('Pousada');
+  });
+
   it('mechanic category unions motorcycle_repair / motorcycle / car_repair', async () => {
     const client = createOverpassClient({ minIntervalMs: 0 });
     const fetchMock = jest.fn().mockResolvedValue(

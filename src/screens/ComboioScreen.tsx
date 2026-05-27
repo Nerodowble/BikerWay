@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  FlatList,
   Keyboard,
+  ScrollView,
   StyleSheet,
   Text,
   View,
-  type ListRenderItem,
+  useWindowDimensions,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@/shared/components/Screen';
@@ -22,6 +22,7 @@ import {
   selectActiveMotorcycle,
   useMotorcycleStore,
 } from '@/state/motorcycleStore';
+import { useRiderStore } from '@/state/riderStore';
 import { useMovementLock } from '@/shared/hooks/useMovementLock';
 import type {
   VoiceConnectionStatus,
@@ -74,18 +75,36 @@ function localStatusDotColor(s: VoiceConnectionStatus): string {
 }
 
 function resolveDisplayName(): string {
+  // Priority order:
+  //   1. Rider profile displayName (the canonical nick — set in
+  //      RiderProfileScreen and used across every social surface).
+  //   2. Active motorcycle's `ownerName` (legacy field on Motorcycle, kept
+  //      for back-compat with bikes created before the rider profile).
+  //   3. Just the bike string ("Honda PCX") when no human name is known.
+  //   4. "Piloto" as a final fallback.
+  const riderName = useRiderStore.getState().profile?.displayName?.trim();
   const active = selectActiveMotorcycle(useMotorcycleStore.getState());
-  if (!active) return 'Piloto';
-  const bike = `${active.brand} ${active.model}`.trim();
-  // "Willian - Honda PCX 2020" format if the owner name is set; otherwise
-  // just the bike string.
-  if (active.ownerName && active.ownerName.length > 0) {
+  const bike = active ? `${active.brand} ${active.model}`.trim() : '';
+
+  if (riderName && riderName.length > 0) {
+    return bike.length > 0 ? `${riderName} - ${bike}` : riderName;
+  }
+  if (active?.ownerName && active.ownerName.length > 0) {
     return bike.length > 0 ? `${active.ownerName} - ${bike}` : active.ownerName;
   }
   return bike.length > 0 ? bike : 'Piloto';
 }
 
 export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
+  // Landscape adaptive layout: in paisagem the active-room screen would be
+  // ~360-450dp tall, so stacking header → list → 3 stacked controls vertically
+  // gets cropped on the bottom. We detect landscape here and switch the
+  // active-room body to a two-column flow (list on the left, controls on the
+  // right). Portrait keeps the original single-column layout intact.
+  const { width: viewportWidth, height: viewportHeight } =
+    useWindowDimensions();
+  const isLandscape = viewportWidth > viewportHeight;
+
   const token = useVoiceGroupStore((s) => s.token);
   const status = useVoiceGroupStore((s) => s.status);
   const isLocalMuted = useVoiceGroupStore((s) => s.isLocalMuted);
@@ -94,6 +113,9 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
   const dominantSpeakerId = useVoiceGroupStore((s) => s.dominantSpeakerId);
   const lastError = useVoiceGroupStore((s) => s.lastError);
   const displayName = useVoiceGroupStore((s) => s.displayName);
+  // F30: toggles locais — ocultar pins dos peers e mutar audio recebido.
+  const peerPinsHidden = useVoiceGroupStore((s) => s.peerPinsHidden);
+  const incomingAudioMuted = useVoiceGroupStore((s) => s.incomingAudioMuted);
 
   const createComboio = useVoiceGroupStore((s) => s.createComboio);
   const joinComboio = useVoiceGroupStore((s) => s.joinComboio);
@@ -101,6 +123,10 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
   const setStatus = useVoiceGroupStore((s) => s.setStatus);
   const setLocalMuted = useVoiceGroupStore((s) => s.setLocalMuted);
   const setAudioOutput = useVoiceGroupStore((s) => s.setAudioOutput);
+  const setPeerPinsHidden = useVoiceGroupStore((s) => s.setPeerPinsHidden);
+  const setIncomingAudioMuted = useVoiceGroupStore(
+    (s) => s.setIncomingAudioMuted,
+  );
   const upsertParticipant = useVoiceGroupStore((s) => s.upsertParticipant);
   const removeParticipant = useVoiceGroupStore((s) => s.removeParticipant);
   const setDominantSpeaker = useVoiceGroupStore((s) => s.setDominantSpeaker);
@@ -151,6 +177,16 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
     setShowRoutingNotice(true);
   }, [audioOutput, setAudioOutput]);
 
+  // F30: toggles puramente locais — apenas mudam state no store + (no caso
+  // do mute incoming) propagam pra WebView via VoiceSessionMount effect.
+  const handleTogglePeerPins = useCallback(() => {
+    setPeerPinsHidden(!peerPinsHidden);
+  }, [peerPinsHidden, setPeerPinsHidden]);
+
+  const handleToggleIncomingMute = useCallback(() => {
+    setIncomingAudioMuted(!incomingAudioMuted);
+  }, [incomingAudioMuted, setIncomingAudioMuted]);
+
   const handleHangup = useCallback(() => {
     getVoiceController()?.hangup();
     leaveComboio();
@@ -160,7 +196,7 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
   // Lobby
   if (token === null) {
     return (
-      <Screen padding testID="screen-comboio-lobby">
+      <Screen padding scroll testID="screen-comboio-lobby">
         <View style={styles.header}>
           <Text style={styles.title}>Comboio</Text>
           <View style={styles.closeButton}>
@@ -271,33 +307,50 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
   const muteVariant: 'primary' | 'danger' = isLocalMuted ? 'danger' : 'primary';
   const audioOutputLabel =
     audioOutput === 'speaker' ? 'ALTO-FALANTE' : 'FONE/CAPACETE';
+  // F30: labels com estado VISIVEL (palavra forte) e variant warning
+  // quando ativo pra deixar claro que a UX padrao da audicao/visualizacao
+  // esta alterada — espelha a regra do MUTAR/DESMUTAR.
+  const peerPinsLabel = peerPinsHidden
+    ? 'MOSTRAR PINS NO MAPA'
+    : 'OCULTAR PINS NO MAPA';
+  const peerPinsVariant: 'secondary' | 'warning' = peerPinsHidden
+    ? 'warning'
+    : 'secondary';
+  const incomingMuteLabel = incomingAudioMuted
+    ? 'OUVIR COMBOIO'
+    : 'MUTAR TODO COMBOIO';
+  const incomingMuteVariant: 'secondary' | 'warning' = incomingAudioMuted
+    ? 'warning'
+    : 'secondary';
 
-  return (
-    <Screen padding testID="screen-comboio-active">
-      <View style={styles.activeTopBar}>
-        <View style={styles.activeTopLeft}>
-          <StatusBadge
-            label="Comboio"
-            value={`#${token.code}`}
-            state={ui.state}
-            testID="badge-comboio-room"
-          />
-          <View style={styles.activeTopSpacer} />
-          <StatusBadge
-            label="Status"
-            value={ui.label}
-            state={ui.state}
-            testID="badge-comboio-status"
-          />
-        </View>
+  // The active-room body is built from four reusable blocks (header,
+  // banners, controls, participants). We compose them in two different
+  // orders depending on orientation so each layout reads naturally:
+  //   - Portrait: header → banners → controls (row) → participants (list).
+  //   - Landscape: header (full width) → banners (full width) → row of
+  //     [participants (left, wider) | controls stacked (right)].
+  const headerBlock = (
+    <View style={styles.activeTopBar}>
+      <View style={styles.activeTopLeft}>
+        <StatusBadge
+          label="Comboio"
+          value={`#${token.code}`}
+          state={ui.state}
+          testID="badge-comboio-room"
+        />
+        <View style={styles.activeTopSpacer} />
+        <StatusBadge
+          label="Status"
+          value={ui.label}
+          state={ui.state}
+          testID="badge-comboio-status"
+        />
       </View>
+    </View>
+  );
 
-      {/*
-        The voice WebView used to live here. It now lives at the App root
-        (see VoiceSessionMount in App.tsx) so the call survives when the
-        rider closes this modal to look at the map.
-      */}
-
+  const bannersBlock = (
+    <>
       {showRoutingNotice ? (
         <View style={styles.bannerRow}>
           <StatusBadge
@@ -308,7 +361,6 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
           />
         </View>
       ) : null}
-
       {lastError ? (
         <View style={styles.bannerRow}>
           <StatusBadge
@@ -319,48 +371,121 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
           />
         </View>
       ) : null}
+    </>
+  );
 
-      <View style={styles.controlsRow}>
-        <View style={styles.controlCell}>
-          <View style={styles.bigButtonWrap}>
-            <BigButton
-              label={muteLabel}
-              variant={muteVariant}
-              fullWidth
-              compact
-              onPress={handleToggleMute}
-              testID="btn-comboio-mute"
-            />
-          </View>
-        </View>
-        <View style={styles.controlSpacer} />
-        <View style={styles.controlCell}>
-          <View style={styles.bigButtonWrap}>
-            <BigButton
-              label={audioOutputLabel}
-              variant="secondary"
-              fullWidth
-              compact
-              onPress={handleToggleAudioOutput}
-              testID="btn-comboio-audio-output"
-            />
-          </View>
-        </View>
-        <View style={styles.controlSpacer} />
-        <View style={styles.controlCell}>
-          <View style={styles.bigButtonWrap}>
-            <BigButton
-              label="SAIR"
-              variant="danger"
-              fullWidth
-              compact
-              onPress={handleHangup}
-              testID="btn-comboio-hangup"
-            />
-          </View>
+  // F30 — bloco de preferencias locais (toggles que so afetam ESTE device).
+  // Mantido separado do `controlsBlock` (MUTE/AUDIO/SAIR) pra nao crowdar
+  // 5 botoes na linha portrait. Sempre stack vertical pra etiquetas longas.
+  const localPrefsBlock = (
+    <View style={styles.localPrefsBlock} testID="comboio-local-prefs">
+      <Text style={styles.localPrefsEyebrow}>PREFERÊNCIAS LOCAIS</Text>
+      <Text style={styles.localPrefsHint}>
+        Só afetam o que VOCÊ vê e ouve — os outros não percebem.
+      </Text>
+      <View style={styles.bigButtonWrap}>
+        <BigButton
+          label={peerPinsLabel}
+          variant={peerPinsVariant}
+          fullWidth
+          onPress={handleTogglePeerPins}
+          testID="btn-comboio-toggle-pins"
+        />
+      </View>
+      <View style={styles.controlStackSpacer} />
+      <View style={styles.bigButtonWrap}>
+        <BigButton
+          label={incomingMuteLabel}
+          variant={incomingMuteVariant}
+          fullWidth
+          onPress={handleToggleIncomingMute}
+          testID="btn-comboio-toggle-incoming-mute"
+        />
+      </View>
+    </View>
+  );
+
+  // In landscape we drop `compact` from the BigButtons so the tap targets
+  // stay generous (the column is narrower than a portrait row, but each
+  // button uses the full column width and gets some vertical breathing
+  // room between them via `controlStackSpacer`).
+  const controlsBlock = isLandscape ? (
+    <View style={styles.controlsColumn} testID="comboio-controls-column">
+      <View style={styles.bigButtonWrap}>
+        <BigButton
+          label={muteLabel}
+          variant={muteVariant}
+          fullWidth
+          onPress={handleToggleMute}
+          testID="btn-comboio-mute"
+        />
+      </View>
+      <View style={styles.controlStackSpacer} />
+      <View style={styles.bigButtonWrap}>
+        <BigButton
+          label={audioOutputLabel}
+          variant="secondary"
+          fullWidth
+          onPress={handleToggleAudioOutput}
+          testID="btn-comboio-audio-output"
+        />
+      </View>
+      <View style={styles.controlStackSpacer} />
+      <View style={styles.bigButtonWrap}>
+        <BigButton
+          label="SAIR"
+          variant="danger"
+          fullWidth
+          onPress={handleHangup}
+          testID="btn-comboio-hangup"
+        />
+      </View>
+    </View>
+  ) : (
+    <View style={styles.controlsRow}>
+      <View style={styles.controlCell}>
+        <View style={styles.bigButtonWrap}>
+          <BigButton
+            label={muteLabel}
+            variant={muteVariant}
+            fullWidth
+            compact
+            onPress={handleToggleMute}
+            testID="btn-comboio-mute"
+          />
         </View>
       </View>
+      <View style={styles.controlSpacer} />
+      <View style={styles.controlCell}>
+        <View style={styles.bigButtonWrap}>
+          <BigButton
+            label={audioOutputLabel}
+            variant="secondary"
+            fullWidth
+            compact
+            onPress={handleToggleAudioOutput}
+            testID="btn-comboio-audio-output"
+          />
+        </View>
+      </View>
+      <View style={styles.controlSpacer} />
+      <View style={styles.controlCell}>
+        <View style={styles.bigButtonWrap}>
+          <BigButton
+            label="SAIR"
+            variant="danger"
+            fullWidth
+            compact
+            onPress={handleHangup}
+            testID="btn-comboio-hangup"
+          />
+        </View>
+      </View>
+    </View>
+  );
 
+  const participantsBlock = (
+    <>
       <Text style={styles.sectionTitle}>STATUS DOS INTEGRANTES</Text>
 
       {/* Local user row — always rendered at the top so the rider sees how
@@ -392,7 +517,47 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
         dominantSpeakerId={dominantSpeakerId}
         status={status}
       />
+    </>
+  );
 
+  return (
+    <Screen padding testID="screen-comboio-active">
+      {headerBlock}
+
+      {/*
+        The voice WebView used to live here. It now lives at the App root
+        (see VoiceSessionMount in App.tsx) so the call survives when the
+        rider closes this modal to look at the map.
+      */}
+
+      {bannersBlock}
+
+      {isLandscape ? (
+        // Landscape viewport (~360-450dp altura) facilmente estoura quando o
+        // rider tem >3 peers OU quando aparece um banner. Envolver em
+        // ScrollView garante que tudo permanece acessível mesmo com pouco
+        // espaço vertical.
+        <ScrollView
+          style={styles.landscapeScroll}
+          contentContainerStyle={styles.landscapeScrollContent}
+          testID="comboio-landscape-scroll"
+        >
+          <View style={styles.landscapeSplit} testID="comboio-landscape-split">
+            <View style={styles.landscapeLeftColumn}>{participantsBlock}</View>
+            <View style={styles.landscapeColumnSpacer} />
+            <View style={styles.landscapeRightColumn}>
+              {controlsBlock}
+              {localPrefsBlock}
+            </View>
+          </View>
+        </ScrollView>
+      ) : (
+        <>
+          {controlsBlock}
+          {localPrefsBlock}
+          {participantsBlock}
+        </>
+      )}
     </Screen>
   );
 };
@@ -410,8 +575,8 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
 }) => {
   const isReconnecting = status === 'reconnecting';
 
-  const renderItem: ListRenderItem<VoiceParticipant> = useCallback(
-    ({ item }) => {
+  const renderRow = useCallback(
+    (item: VoiceParticipant) => {
       // green = ok, red = muted, gray = reconnecting/unknown.
       let dotColor: string = colors.success;
       if (isReconnecting) dotColor = colors.textMuted;
@@ -419,7 +584,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
       const isTalking = item.id === dominantSpeakerId && !item.isAudioMuted;
       const tagColor = colorForParticipant(item.id);
       return (
-        <View style={styles.participantRow}>
+        <View key={item.id} style={styles.participantRow}>
           <View style={[styles.participantDot, { backgroundColor: dotColor }]} />
           <View
             style={[styles.participantColorTag, { backgroundColor: tagColor }]}
@@ -447,14 +612,13 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
     );
   }
 
+  // View+map instead of FlatList: a comboio rarely exceeds ~6 peers and the
+  // list is now rendered inside a parent ScrollView in landscape mode — a
+  // nested VirtualizedList would warn and lose its own scrolling anyway.
   return (
-    <FlatList
-      style={styles.participantList}
-      data={participants}
-      keyExtractor={(p) => p.id}
-      renderItem={renderItem}
-      testID="list-comboio-participants"
-    />
+    <View style={styles.participantList} testID="list-comboio-participants">
+      {participants.map(renderRow)}
+    </View>
   );
 };
 
@@ -488,6 +652,45 @@ const styles = StyleSheet.create({
   controlCell: { flex: 1 },
   controlSpacer: { width: spacing.sm },
   bigButtonWrap: { minHeight: 70 },
+  // Landscape: 3 buttons stacked vertically inside the narrower right
+  // column. `flex: 1` here lets the column fill the available height of
+  // the split row so the SAIR button sits flush with the bottom of the
+  // participants list on the left.
+  controlsColumn: { flex: 1, justifyContent: 'flex-start' },
+  controlStackSpacer: { height: spacing.md },
+  localPrefsBlock: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+  },
+  localPrefsEyebrow: {
+    color: colors.textMuted,
+    fontSize: typography.eyebrow.fontSize,
+    fontWeight: typography.eyebrow.fontWeight,
+    letterSpacing: typography.eyebrow.letterSpacing,
+    lineHeight: typography.eyebrow.lineHeight,
+    textTransform: typography.eyebrow.textTransform,
+    marginBottom: 2,
+  },
+  localPrefsHint: {
+    color: colors.textMuted,
+    fontSize: typography.caption.fontSize,
+    fontWeight: typography.caption.fontWeight,
+    lineHeight: typography.caption.lineHeight,
+    fontStyle: 'italic',
+    marginBottom: spacing.md,
+  },
+  // Landscape two-column body. Weights 1.4 / 1 give the participant list
+  // visually more space (it can grow to many rows) without starving the
+  // controls column of width — at 720x360 that's ~410dp / ~290dp, well
+  // above the 64dp tap-target floor for the controls.
+  landscapeScroll: { flex: 1 },
+  landscapeScrollContent: { paddingBottom: spacing.lg, flexGrow: 1 },
+  landscapeSplit: { flex: 1, flexDirection: 'row', alignItems: 'stretch' },
+  landscapeLeftColumn: { flex: 1.4 },
+  landscapeRightColumn: { flex: 1 },
+  landscapeColumnSpacer: { width: spacing.lg },
   sectionTitle: { color: colors.textSecondary, fontSize: typography.navSecondary.fontSize, fontWeight: '700', lineHeight: typography.navSecondary.lineHeight, marginTop: spacing.lg, marginBottom: spacing.sm, letterSpacing: 0.5 },
   participantList: { flex: 1 },
   participantRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, borderRadius: radius.sm },

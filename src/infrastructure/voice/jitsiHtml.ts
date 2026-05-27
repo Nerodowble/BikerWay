@@ -256,6 +256,11 @@ export function buildJitsiHtml(input: BuildJitsiHtmlInput): string {
   }
 
   // ----- Audio element wrangling ---------------------------------------------
+  // F30: flag local pra mutar todo o audio RECEBIDO de uma vez. Aplicado
+  // em cada audio element quando o RN dispara bwSetIncomingMuted e tambem
+  // em audios novos quando attachRemoteStream for chamado durante o
+  // estado mutado (caso um peer entre depois do mute).
+  var incomingMuted = false;
   function attachRemoteStream(peerId, stream) {
     var entry = remotes[peerId] || (remotes[peerId] = {});
     if (entry.audioEl && entry.audioEl.srcObject === stream) return;
@@ -268,6 +273,9 @@ export function buildJitsiHtml(input: BuildJitsiHtmlInput): string {
     el.setAttribute('playsinline', 'true');
     el.dataset.peerId = peerId;
     el.srcObject = stream;
+    // Aplica o estado de mute incoming corrente — peer entrando enquanto
+    // estamos mutados nao deve "furar" o silencio.
+    el.muted = incomingMuted;
     document.body.appendChild(el);
     entry.audioEl = el;
     // Best-effort play() — some WebViews require an explicit kick.
@@ -425,6 +433,20 @@ export function buildJitsiHtml(input: BuildJitsiHtmlInput): string {
     muted = !!b;
     applyMuteToTracks();
     post('audioMuteStatusChanged', { muted: muted });
+    return true;
+  };
+  // F30: setter pra muta local do AUDIO RECEBIDO. Itera os audios remotos
+  // ja attachados e aplica em todos. Novos peers entram silenciados
+  // automaticamente via attachRemoteStream lendo a flag.
+  window.bwSetIncomingMuted = function (b) {
+    incomingMuted = !!b;
+    var ids = Object.keys(remotes);
+    for (var i = 0; i < ids.length; i++) {
+      var entry = remotes[ids[i]];
+      if (entry && entry.audioEl) {
+        try { entry.audioEl.muted = incomingMuted; } catch (e) { /* swallow */ }
+      }
+    }
     return true;
   };
   window.bwHangup = function () {

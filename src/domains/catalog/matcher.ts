@@ -7,6 +7,19 @@ import type {
 } from './types';
 
 /**
+ * Empirical multiplier that converts a great-circle (haversine) distance into
+ * an approximate real-road distance for the approach and return legs of a
+ * catalog trip. Studies of Brazilian highway networks put the average ratio
+ * around 1.25-1.35 — we pick 1.30 as a conservative middle ground that
+ * over-estimates short urban hops slightly (so the rider isn't surprised by
+ * extra fuel) while under-estimating very twisty mountain roads (where the
+ * `polilinha_simplificada` already captures the meandering inside the route
+ * itself). Override at the call site (e.g. when OSRM gives a real number) by
+ * passing the corrected distance into `calculateRouteCost` directly.
+ */
+export const STRAIGHT_TO_ROAD_FACTOR = 1.3 as const;
+
+/**
  * Run the 4-step matching pipeline (spec section 1) on the in-memory catalog.
  *
  * Pipeline:
@@ -49,29 +62,36 @@ export function matchRoutes(
       longitude: route.coordenada_fim.longitude,
     };
 
-    const distanceToStartKm = calculateHaversineDistance(
-      filters.origin,
-      startPoint,
-    );
-    const returnDistanceKm = calculateHaversineDistance(
-      endPoint,
-      filters.origin,
-    );
-    const approachDistanceKm = distanceToStartKm;
+    const rawApproachKm = calculateHaversineDistance(filters.origin, startPoint);
+    const rawReturnKm = calculateHaversineDistance(endPoint, filters.origin);
+    // distanceToStartKm stays as the great-circle distance because it's the
+    // "as the crow flies" proximity used for sorting; multiplying it would
+    // distort how the rider sees "rotas mais perto" in the list.
+    const distanceToStartKm = rawApproachKm;
+    const approachDistanceKm = rawApproachKm * STRAIGHT_TO_ROAD_FACTOR;
+    const returnDistanceKm = rawReturnKm * STRAIGHT_TO_ROAD_FACTOR;
     const roundTripDistanceKm =
       approachDistanceKm + route.distancia_total_km + returnDistanceKm;
 
+    const effectiveFuelPrice =
+      filters.fuelPricePerLiter > 0
+        ? filters.fuelPricePerLiter
+        : DEFAULT_FUEL_PRICE_REAIS;
     const breakdown = calculateRouteCost(
       route.distancia_total_km,
       filters.motoConsumoKmL,
-      DEFAULT_FUEL_PRICE_REAIS,
+      effectiveFuelPrice,
       route.total_pedagios_moto_reais,
     );
+    // Round-trip: rider passes through every plaza twice (going out + coming
+    // back), so the toll must be doubled. `total_pedagios_moto_reais` stores
+    // the one-way sum by contract (see types.ts) and the previous version of
+    // this code mistakenly counted it once, silently undercounting cost.
     const roundTripBreakdown = calculateRouteCost(
       roundTripDistanceKm,
       filters.motoConsumoKmL,
-      DEFAULT_FUEL_PRICE_REAIS,
-      route.total_pedagios_moto_reais,
+      effectiveFuelPrice,
+      route.total_pedagios_moto_reais * 2,
     );
 
     const autonomyWarning =
@@ -99,6 +119,7 @@ export function matchRoutes(
       roundTripFuelLiters: roundTripBreakdown.liters,
       roundTripFuelCostReais: roundTripBreakdown.fuelCost,
       roundTripTotalCostReais: roundTripBreakdown.totalCost,
+      fuelPricePerLiter: effectiveFuelPrice,
       autonomyWarning,
       overBudget,
     });

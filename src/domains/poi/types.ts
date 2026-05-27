@@ -1,16 +1,31 @@
 /**
  * POI category identifiers used across the Overpass client, the POI store,
  * and the UI sheet. Adding a new category requires a matching query branch
- * in `overpassClient.buildQuery` and a chip in `PoiListSheet`.
+ * in `overpassClient.buildQuery` (selectorsFor + fallbackName) and a chip
+ * in `PoiListSheet` (CATEGORY_COPY + CATEGORY_CHIPS).
  *
+ * Mecanico/motociclista:
  * - 'fuel'    : gas stations (OSM `amenity=fuel`)
  * - 'tyres'   : tyre shops / repair (OSM `shop=tyres` / `shop=tire_repair` /
  *               `craft=tyres`)
  * - 'mechanic': motorcycle / general mechanic workshops (OSM
  *               `shop=motorcycle_repair` / `shop=motorcycle` /
  *               `amenity=motorcycle_repair` / `shop=car_repair` as fallback)
+ *
+ * Hospedagem/alimentacao (F31 — POI generalizada pra viagem):
+ * - 'restaurante': comida sentada + fast food (OSM `amenity=restaurant`,
+ *                  `amenity=fast_food`)
+ * - 'hotel'      : hoteis (OSM `tourism=hotel`, `tourism=motel`)
+ * - 'pousada'    : pousadas + hostels (OSM `tourism=guest_house`,
+ *                  `tourism=hostel`)
  */
-export type PoiCategory = 'fuel' | 'tyres' | 'mechanic';
+export type PoiCategory =
+  | 'fuel'
+  | 'tyres'
+  | 'mechanic'
+  | 'restaurante'
+  | 'hotel'
+  | 'pousada';
 
 export interface PointOfInterest {
   id: string;

@@ -1,5 +1,29 @@
 export type Pavimento = 'asfalto' | 'misto' | 'terra';
 export type NivelCurvas = 'baixo' | 'medio' | 'alto';
+/**
+ * Curated metadata enums (F21.1). Kept aligned with
+ * `prompts/catalog-schema.json` and `scripts/validate-catalog.ts`. If you add
+ * a new tier here, mirror it in both files so the validator stays the source
+ * of truth for what the curated JSON may carry.
+ */
+export type Confiabilidade = 'alta' | 'media' | 'baixa';
+export type Dificuldade = 'iniciante' | 'intermediario' | 'avancado';
+export type SistemaCobranca = 'fisica' | 'free_flow';
+
+/**
+ * Per-plaza toll detail (F28). Surfaces the breakdown that
+ * `total_pedagios_moto_reais` aggregates so the rider sees *which* plazas they
+ * pass through and so future audits can spot when a concessionaire reajuste
+ * lands. All values are for motorcycles (categoria 5 ANTT), single-pass.
+ */
+export interface PedagioPraca {
+  nome: string;
+  km?: number;
+  valor_moto_reais: number;
+  sistema: SistemaCobranca;
+  concessionaria?: string;
+  fonte_url?: string;
+}
 
 export interface CatalogRouteCoordinate {
   cidade: string;
@@ -27,6 +51,13 @@ export interface CatalogRoute {
   coordenada_inicio: CatalogRouteCoordinate;
   coordenada_fim: CatalogRouteCoordinate;
   distancia_total_km: number;
+  /**
+   * Sum of all motorcycle toll fees for ONE pass through the route (one-way).
+   * The matcher doubles this when computing the round-trip cost — the rider
+   * pays each plaza both going out and coming back. Keep this value as the
+   * one-way sum of `pedagios_detalhados[].valor_moto_reais` so the two stay
+   * in sync.
+   */
   total_pedagios_moto_reais: number;
   caracteristicas: {
     tipo_pavimento: Pavimento;
@@ -36,6 +67,28 @@ export interface CatalogRoute {
   interconexoes_ids: string[];
   pontos_apoio_homologados: CatalogPontoApoio[];
   polilinha_simplificada: CatalogPolylinePoint[];
+  /**
+   * Curated metadata (F21.1). All optional — older catalog entries pre-date
+   * the framework and must keep rendering. The card guards every read with
+   * an `undefined` check so absent fields render no extra UI rather than a
+   * placeholder. Invalid values (e.g. unknown enum string in the JSON) are
+   * dropped silently during validation (`catalogClient.ts`) so a single
+   * mis-curated entry cannot brick the catalog screen.
+   */
+  ultima_revisao?: string;
+  confiabilidade?: Confiabilidade;
+  dificuldade?: Dificuldade;
+  melhor_epoca?: string;
+  descricao_biker?: string;
+  fontes_dados?: string[];
+  dicas_seguranca?: string[];
+  /**
+   * Per-plaza breakdown of `total_pedagios_moto_reais` (F28). Optional —
+   * older entries pre-date this field. When present, the array sums to
+   * `total_pedagios_moto_reais` (one-way) and the rider-facing detail screen
+   * can list each plaza individually.
+   */
+  pedagios_detalhados?: PedagioPraca[];
 }
 
 /**
@@ -50,6 +103,14 @@ export interface CatalogFilters {
   motoSafeAutonomyKm: number;
   pavimento: 'asfalto' | 'misto' | null;
   nivelCurvas: NivelCurvas | null;
+  /**
+   * Rider-editable price per litre. The catalog screen pre-fills this with
+   * `DEFAULT_FUEL_PRICE_REAIS` but a rider in a cheaper (interior) or pricier
+   * (litoral / capital) region can override before the search so the cost
+   * estimate reflects their actual pump. Non-positive values fall back to
+   * the default inside the matcher to avoid zero-cost cards.
+   */
+  fuelPricePerLiter: number;
 }
 
 /**
@@ -77,6 +138,45 @@ export interface CatalogRouteMatch {
   roundTripFuelLiters: number;
   roundTripFuelCostReais: number;
   roundTripTotalCostReais: number;
+  /**
+   * Price per litre used in the cost breakdown. We surface this on the card
+   * so the rider can sanity-check the math ("R$ X,XX × Y L"); otherwise the
+   * total is opaque when the rider has edited the default to a regional
+   * price.
+   */
+  fuelPricePerLiter: number;
   autonomyWarning: boolean;
   overBudget: boolean;
+  /**
+   * Real-road metrics provided by OSRM, written by
+   * `refineResultsWithOsrm` after the initial haversine-based card has
+   * already rendered. All fields are optional because the refinement is
+   * fire-and-forget — when OSRM is offline (or the rider's match falls
+   * outside the top-N refine budget) we keep the haversine numbers and
+   * leave these undefined.
+   *
+   * `realRouteDistanceKm` may differ from `route.distancia_total_km` (the
+   * curated JSON value) because OSRM re-computes the polyline with current
+   * road data and waypoint decimation.
+   */
+  realApproachDistanceKm?: number;
+  realRouteDistanceKm?: number;
+  realReturnDistanceKm?: number;
+  realRoundTripDistanceKm?: number;
+  realRoundTripFuelLiters?: number;
+  realRoundTripFuelCostReais?: number;
+  realRoundTripTotalCostReais?: number;
+  /**
+   * `true` while at least one of the three OSRM calls (approach, route,
+   * return) is still in flight. The card flips to a small "atualizando…"
+   * indicator while this is set. Mutually exclusive with
+   * `hasRealMetrics === true`.
+   */
+  isRefining?: boolean;
+  /**
+   * `true` once all three OSRM calls have succeeded and the `real*` fields
+   * are populated. The card swaps the haversine round-trip line for the
+   * OSRM-derived one (and shows a small green dot).
+   */
+  hasRealMetrics?: boolean;
 }

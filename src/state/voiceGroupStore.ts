@@ -46,6 +46,21 @@ export interface VoiceGroupStoreState {
    * peer id. Old entries are pruned by `purgeStalePeerPositions(maxAgeMs)`.
    */
   peerPositions: Record<string, ComboioPeerPosition>;
+  /**
+   * F30: toggle local — quando true, suprime a renderizacao dos pins dos
+   * peers no MEU mapa. NAO afeta o broadcast (outros peers continuam me
+   * vendo) nem o processamento de peerPositions no store. Reseta pra
+   * false em `leaveComboio` pra o proximo comboio comecar limpo.
+   */
+  peerPinsHidden: boolean;
+  /**
+   * F30: toggle local — quando true, muta o AUDIO RECEBIDO de todos os
+   * peers. O VoiceSessionMount propaga pra WebView que seta
+   * `audio.muted = true` em cada `<audio>` remoto. Diferente de
+   * `isLocalMuted` (que silencia MEU mic — afeta o que os outros ouvem).
+   * Reseta em `leaveComboio`.
+   */
+  incomingAudioMuted: boolean;
 
   // Lifecycle — the JitsiWebView is mounted in the screen tree and feeds
   // events back into these reducers via the screen. The store deliberately
@@ -63,6 +78,8 @@ export interface VoiceGroupStoreState {
   updatePeerPosition: (entry: ComboioPeerPosition) => void;
   purgeStalePeerPositions: (maxAgeMs: number) => void;
   clearPeerPositions: () => void;
+  setPeerPinsHidden: (hidden: boolean) => void;
+  setIncomingAudioMuted: (muted: boolean) => void;
 
   /**
    * Mark the session as silently reconnecting after a transient network drop.
@@ -96,6 +113,8 @@ interface InitialResetShape {
   dominantSpeakerId: string | null;
   lastError: string | null;
   peerPositions: Record<string, ComboioPeerPosition>;
+  peerPinsHidden: boolean;
+  incomingAudioMuted: boolean;
 }
 
 const RESET_FIELDS: InitialResetShape = {
@@ -107,6 +126,8 @@ const RESET_FIELDS: InitialResetShape = {
   dominantSpeakerId: null,
   lastError: null,
   peerPositions: {},
+  peerPinsHidden: false,
+  incomingAudioMuted: false,
 };
 
 export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
@@ -119,6 +140,8 @@ export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
   dominantSpeakerId: null,
   lastError: null,
   peerPositions: {},
+  peerPinsHidden: false,
+  incomingAudioMuted: false,
 
   createComboio: (displayName) => {
     const token = buildComboioToken();
@@ -131,6 +154,8 @@ export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
       dominantSpeakerId: null,
       lastError: null,
       peerPositions: {},
+      peerPinsHidden: false,
+      incomingAudioMuted: false,
     });
     return token;
   },
@@ -150,6 +175,8 @@ export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
       dominantSpeakerId: null,
       lastError: null,
       peerPositions: {},
+      peerPinsHidden: false,
+      incomingAudioMuted: false,
     });
     return token;
   },
@@ -164,6 +191,8 @@ export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
   setStatus: (s) => set({ status: s }),
   setLocalMuted: (muted) => set({ isLocalMuted: muted }),
   setAudioOutput: (o) => set({ audioOutput: o }),
+  setPeerPinsHidden: (hidden) => set({ peerPinsHidden: hidden }),
+  setIncomingAudioMuted: (muted) => set({ incomingAudioMuted: muted }),
 
   upsertParticipant: (p) => {
     const list = get().participants;

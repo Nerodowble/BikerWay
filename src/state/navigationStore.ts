@@ -36,6 +36,13 @@ export interface NavigationStoreState extends NavigationState {
   lastReroutedAt: number | null;
   lastSamplePosition: GeoPosition | null;
   /**
+   * Unix epoch ms marking when `startNavigation()` was last called.
+   * Reset to `null` by `stopNavigation()`. Used by the top-left timer badge
+   * to show "Pilotando há HH:MM" without storing a tick — the badge
+   * recomputes the elapsed delta locally every minute.
+   */
+  tripStartedAt: number | null;
+  /**
    * Coarse hint: index of the nearest route vertex to the rider, used by the
    * POI engine to slice the remaining route. Only recomputed when the 500m
    * sample threshold fires (sub-500m drift is irrelevant for a 1km buffer),
@@ -208,6 +215,7 @@ export const useNavigationStore = create<NavigationStoreState>((set, get) => ({
   currentPosition: null,
   destination: null,
   isNavigating: false,
+  tripStartedAt: null,
   distanceTraveledKm: 0,
   isReserveMode: false,
   routeSettings: { type: 'express', allowUnpaved: false },
@@ -291,6 +299,11 @@ export const useNavigationStore = create<NavigationStoreState>((set, get) => ({
     const nextState: NavigationStoreState = { ...state, isNavigating: true };
     set({
       isNavigating: true,
+      // Only stamp tripStartedAt when transitioning from idle → active.
+      // A re-call while already navigating (e.g. catalog INICIAR ROTA on top
+      // of an existing trip) preserves the original clock so the rider sees
+      // total ride time, not per-segment time.
+      tripStartedAt: state.tripStartedAt ?? Date.now(),
       lastSamplePosition: anchor,
       isReserveMode: evaluateReserve(nextState),
     });
@@ -313,6 +326,7 @@ export const useNavigationStore = create<NavigationStoreState>((set, get) => ({
     const nextState: NavigationStoreState = { ...get(), isNavigating: false };
     set({
       isNavigating: false,
+      tripStartedAt: null,
       isReserveMode: evaluateReserve(nextState),
       activeRoute: null,
       routeAlternatives: null,

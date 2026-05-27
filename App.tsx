@@ -14,9 +14,13 @@ import {
 import '@/infrastructure/location/backgroundLocationTask';
 import AppNavigator from '@/navigation/AppNavigator';
 import { useMotorcycleStore } from '@/state/motorcycleStore';
+import { useRiderStore } from '@/state/riderStore';
 import { bootstrapApp } from '@/state/bootstrap';
 import { colors } from '@/shared/theme';
 import { VoiceSessionMount } from '@/shared/components/voice';
+import { SOSNetworkMount } from '@/shared/components/sos/SOSNetworkMount';
+import { SOSPeerJSMount } from '@/shared/components/sos/SOSPeerJSMount';
+import { IncomingSOSMount } from '@/shared/components/sos/IncomingSOSMount';
 
 const bikerWayDarkTheme: Theme = {
   ...DefaultTheme,
@@ -33,7 +37,14 @@ const bikerWayDarkTheme: Theme = {
 };
 
 export default function App() {
-  const isHydrated = useMotorcycleStore((s) => s.isHydrated);
+  // F33: gate de boot agora aguarda AMBOS os stores hidratarem antes de
+  // montar o AppNavigator. Sem isso, o navigator decidiria entre
+  // RiderProfile/MotorcycleSetup/Home baseado em `profile === null` antes
+  // do loadProfile resolver, e usuarios com perfil ja salvo veriam a
+  // tela de "criar perfil" piscar.
+  const motorcyclesHydrated = useMotorcycleStore((s) => s.isHydrated);
+  const riderHydrated = useRiderStore((s) => s.isHydrated);
+  const isHydrated = motorcyclesHydrated && riderHydrated;
 
   useEffect(() => {
     void bootstrapApp();
@@ -63,6 +74,20 @@ export default function App() {
       {/* Singleton voice session - owns the PeerJS WebView so the call and
           GPS broadcasts survive navigation between ComboioScreen and Home. */}
       <VoiceSessionMount />
+      {/* Singleton SOS Comunitario (F29.2): mantem o canal P2P/loopback
+          ativo durante toda a vida do app pra que o piloto receba
+          alertas mesmo fora do comboio. Sem render — apenas mantem o
+          refreshRoom() rodando conforme o GPS muda e prune do TTL. */}
+      <SOSNetworkMount />
+      {/* F29.2b: WebView headless que conecta este device a peers do
+          mesmo geohash4 via PeerJS (broker model). Substitui o transport
+          Loopback assim que a pagina termina boot. Sem GPS, renderiza
+          null e o Loopback continua valendo. */}
+      <SOSPeerJSMount />
+      {/* F29.3: modal de alerta de SOS recebido. Renderiza acima de
+          QUALQUER tela quando ha um alerta no incomingSOSStore, pra que
+          o piloto seja avisado em qualquer momento da viagem. */}
+      <IncomingSOSMount />
       <StatusBar
         style="light"
         backgroundColor={colors.background}

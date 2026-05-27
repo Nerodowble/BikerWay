@@ -48,6 +48,7 @@ const defaultFilters: CatalogFilters = {
   motoSafeAutonomyKm: 200,
   pavimento: null,
   nivelCurvas: null,
+  fuelPricePerLiter: 6.0,
 };
 
 describe('matchRoutes', () => {
@@ -124,8 +125,11 @@ describe('matchRoutes', () => {
     expect(match).toBeDefined();
     if (!match) return;
     expect(match.approachDistanceKm).toBeCloseTo(0, 1);
-    expect(match.returnDistanceKm).toBeGreaterThan(10);
-    expect(match.returnDistanceKm).toBeLessThan(20);
+    // returnDistanceKm = haversine (~14 km) * STRAIGHT_TO_ROAD_FACTOR (1.3)
+    // ≈ 18.2 km. Window stays loose because makeRoute keeps the same lat/lng
+    // pair, so a change in the factor in matcher.ts triggers this assertion.
+    expect(match.returnDistanceKm).toBeGreaterThan(15);
+    expect(match.returnDistanceKm).toBeLessThan(22);
     // Round-trip is approach + 100km route + return; must beat the rota-only
     // distance by exactly the round-trip overhead.
     expect(match.roundTripDistanceKm).toBeGreaterThan(
@@ -137,6 +141,26 @@ describe('matchRoutes', () => {
     expect(match.roundTripTotalCostReais).toBeGreaterThan(
       match.estimatedTotalCostReais,
     );
+  });
+
+  it('charges the toll twice on round-trip (rider pays each plaza going + coming)', () => {
+    // Rider sits at the start coordinate (approach=0). Route distance 0 isolates
+    // the toll math from fuel math: only toll cost remains, paid once one-way
+    // and twice round-trip.
+    const route = makeRoute({ id: 'toll-only', distanciaKm: 50, toll: 10 });
+    const [match] = matchRoutes([route], {
+      ...defaultFilters,
+      // Consumo gigante zera o gasto de combustível e deixa o pedágio dominar.
+      motoConsumoKmL: 100000,
+    });
+    expect(match).toBeDefined();
+    if (!match) return;
+    // One-way breakdown = exactly the toll (combustível ≈ 0 com consumo absurdo)
+    expect(match.estimatedTotalCostReais).toBeCloseTo(10, 1);
+    // Round-trip breakdown deve cobrar o pedágio das duas passadas (ida+volta).
+    // ~R$ 20 + alguns centavos de fuel. Janela larga pra absorver o haversine.
+    expect(match.roundTripTotalCostReais).toBeGreaterThan(19);
+    expect(match.roundTripTotalCostReais).toBeLessThan(21);
   });
 
   it('flips overBudget based on round-trip cost, not rota-only', () => {

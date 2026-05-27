@@ -14,9 +14,38 @@ import { useNavigationStore } from './navigationStore';
 const FALLBACK_HALF_WIDTH_METERS = 5000;
 /** Keep POIs within this distance of the rider when in fallback mode. */
 const FALLBACK_KEEP_RADIUS_METERS = 3000;
-/** Search radius for the explicit "nearby" mode (no route filter). */
-const NEARBY_HALF_WIDTH_METERS = 6000;
-const NEARBY_KEEP_RADIUS_METERS = 5000;
+
+/**
+ * F31 — Parametros de busca por categoria. Os defaults globais antigos
+ * (1km buffer, 5km raio) faziam sentido pra fuel/borracheiro/oficina
+ * (piloto desvia pouco pra parar) mas eram apertados demais pra
+ * hospedagem/comida — em Diadema, raio 5km pega 1 pousada;
+ * em Mongagua, buffer 1km exclui as pousadas que ficam off-highway
+ * perto da praia.
+ *
+ * `routeBufferMeters`: largura da faixa de busca ao redor da rota
+ * (along-route). Quanto MAIOR, mais POIs no buffer (vale a pena desviar
+ * pra hotel; ja pra borracheiro nao).
+ * `nearbyHalfWidthMeters`: half-width do bbox passado pro Overpass no
+ * modo "Proximos a mim". Sempre um pouco MAIOR que `nearbyKeepRadius`
+ * pra dar folga ao filtro.
+ * `nearbyKeepRadiusMeters`: filtro haversine pos-Overpass. POIs alem
+ * desse raio sao descartados.
+ */
+interface CategoryParams {
+  routeBufferMeters: number;
+  nearbyHalfWidthMeters: number;
+  nearbyKeepRadiusMeters: number;
+}
+
+const CATEGORY_PARAMS: Record<PoiCategory, CategoryParams> = {
+  fuel: { routeBufferMeters: 1000, nearbyHalfWidthMeters: 6000, nearbyKeepRadiusMeters: 5000 },
+  tyres: { routeBufferMeters: 1000, nearbyHalfWidthMeters: 6000, nearbyKeepRadiusMeters: 5000 },
+  mechanic: { routeBufferMeters: 1500, nearbyHalfWidthMeters: 8000, nearbyKeepRadiusMeters: 7000 },
+  restaurante: { routeBufferMeters: 2500, nearbyHalfWidthMeters: 9000, nearbyKeepRadiusMeters: 8000 },
+  hotel: { routeBufferMeters: 5000, nearbyHalfWidthMeters: 22000, nearbyKeepRadiusMeters: 20000 },
+  pousada: { routeBufferMeters: 5000, nearbyHalfWidthMeters: 22000, nearbyKeepRadiusMeters: 20000 },
+};
 
 export type PoiSearchMode = 'along-route' | 'nearby';
 
@@ -78,6 +107,8 @@ export const usePoiStore = create<PoiStoreState>((set, get) => ({
       set({ lastError: 'Nenhuma rota ativa' });
       return;
     }
+
+    const params = CATEGORY_PARAMS[category];
 
     // Degenerate route: <2 vertices means findPoisAlongRoute would filter
     // everything out (nearest-vertex distance is +Infinity for an empty
@@ -141,6 +172,9 @@ export const usePoiStore = create<PoiStoreState>((set, get) => ({
           longitude: currentPosition.longitude,
         },
         pois: result,
+        // F31: buffer dependente da categoria. Hospedagem precisa de
+        // mais que 1km porque pousadas frequentemente ficam off-highway.
+        bufferMeters: params.routeBufferMeters,
       });
       set({ pois: filtered, lastFetchedAt: Date.now() });
     } catch (err) {
@@ -154,6 +188,7 @@ export const usePoiStore = create<PoiStoreState>((set, get) => ({
   fetchNearby: async () => {
     set({ searchMode: 'nearby' });
     const category = get().searchCategory;
+    const params = CATEGORY_PARAMS[category];
     const navState = useNavigationStore.getState();
     const currentPosition = navState.currentPosition;
     if (!currentPosition) {
@@ -162,7 +197,10 @@ export const usePoiStore = create<PoiStoreState>((set, get) => ({
     }
     set({ isFetching: true, lastError: null });
     try {
-      const bbox = fallbackBoundingBox(currentPosition, NEARBY_HALF_WIDTH_METERS);
+      const bbox = fallbackBoundingBox(
+        currentPosition,
+        params.nearbyHalfWidthMeters,
+      );
       const result = await overpassClient.fetchPoisInBox(bbox, category);
       const userPos = {
         latitude: currentPosition.latitude,
@@ -176,7 +214,7 @@ export const usePoiStore = create<PoiStoreState>((set, get) => ({
           longitude: poi.longitude,
           timestamp: 0,
         });
-        if (distanceFromUserMeters > NEARBY_KEEP_RADIUS_METERS) continue;
+        if (distanceFromUserMeters > params.nearbyKeepRadiusMeters) continue;
         filtered.push({
           ...poi,
           distanceFromUserMeters,
@@ -197,6 +235,11 @@ export const usePoiStore = create<PoiStoreState>((set, get) => ({
 
   setSearchMode: async (mode) => {
     if (get().searchMode === mode) return;
+    // F31: limpa a lista antes do fetch pra evitar que o usuario veja
+    // brevemente resultados do modo anterior (ex: ao trocar de
+    // along-route pra nearby, evita ver pousadas de Mongagua aparecendo
+    // como se fossem "Proximas a mim" em Diadema).
+    set({ pois: [], selectedPoiId: null });
     if (mode === 'nearby') {
       await get().fetchNearby();
     } else {

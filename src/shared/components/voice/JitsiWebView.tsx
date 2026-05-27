@@ -59,6 +59,12 @@ export interface JitsiDiagnosticState {
 export interface JitsiWebViewHandle {
   toggleAudio: () => void;
   setAudioMuted: (muted: boolean) => void;
+  /**
+   * F30: muta o audio RECEBIDO localmente — outros peers continuam ouvindo
+   * uns aos outros normalmente, so este device deixa de reproduzir audio
+   * dos demais. Diferente de `setAudioMuted` (que silencia o MEU mic).
+   */
+  setIncomingAudioMuted: (muted: boolean) => void;
   hangup: () => void;
   /**
    * Broadcast the local GPS position to every connected comboio peer over
@@ -157,6 +163,8 @@ export const JitsiWebView = forwardRef<JitsiWebViewHandle, JitsiWebViewProps>(fu
       toggleAudio: () => inject(buildJitsiInjectionScript({ kind: 'toggleAudio' })),
       setAudioMuted: (muted: boolean) =>
         inject(buildJitsiInjectionScript({ kind: 'setAudioMuted', muted })),
+      setIncomingAudioMuted: (muted: boolean) =>
+        inject(buildJitsiInjectionScript({ kind: 'setIncomingMuted', muted })),
       hangup: () => inject(buildJitsiInjectionScript({ kind: 'hangup' })),
       sendPeerPosition: (input) =>
         inject(

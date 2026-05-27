@@ -13,6 +13,18 @@ import { StatusBadge } from '@/shared/components/StatusBadge';
 import { HomeMenuDrawer } from '@/shared/components/HomeMenuDrawer';
 import { HomeLandscapeMenuContent } from '@/shared/components/HomeLandscapeMenuContent';
 import { BikerMapView, type BikerMapHandle } from '@/shared/components/map';
+import {
+  CloseIcon,
+  ComboioIcon,
+  CompassIcon,
+  CrosshairIcon,
+  FuelDropIcon,
+  GasPumpIcon,
+  GearIcon,
+  MapPinIcon,
+  MenuIcon,
+  PlayIcon,
+} from '@/shared/components/icons';
 import { PoiListSheet } from '@/shared/components/poi/PoiListSheet';
 import { FuelArrivalModal } from '@/shared/components/poi/FuelArrivalModal';
 import { RouteAlternativesSheet } from '@/shared/components/route/RouteAlternativesSheet';
@@ -22,6 +34,7 @@ import {
   ManeuverPanel,
   PermissionBanner,
   ProgressBar,
+  TripTimerBadge,
 } from '@/shared/components/navigation';
 import {
   useFuelArrivalDetector,
@@ -36,9 +49,11 @@ import {
   selectActiveMotorcycle,
 } from '@/state/motorcycleStore';
 import { useNavigationStore } from '@/state/navigationStore';
+import { useAcceptedSOSStore } from '@/state/acceptedSOSStore';
 import { useLocationStore } from '@/state/locationStore';
 import { usePoiStore } from '@/state/poiStore';
 import { useVoiceGroupStore } from '@/state/voiceGroupStore';
+import { useRiderStore } from '@/state/riderStore';
 import {
   buildFullCatalogRoute,
   useCatalogStore,
@@ -118,6 +133,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const userPos = useNavigationStore((s) => s.currentPosition);
   const destination = useNavigationStore((s) => s.destination);
   const isNavigating = useNavigationStore((s) => s.isNavigating);
+  const tripStartedAt = useNavigationStore((s) => s.tripStartedAt);
   const activeRoute = useNavigationStore((s) => s.activeRoute);
   const distanceTraveledKm = useNavigationStore((s) => s.distanceTraveledKm);
   const isReserveModeFlag = useNavigationStore((s) => s.isReserveMode);
@@ -139,6 +155,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   );
   const setDestination = useNavigationStore((s) => s.setDestination);
   const startNavigation = useNavigationStore((s) => s.startNavigation);
+
+  // F29.3: pilula SOS no mapa quando o piloto aceitou socorrer alguem.
+  // Quando preenchido, BikerMapView substitui o DestinationMarker regular
+  // pelo SOSAlertMarker (vermelho com texto "SOS"). O store auto-limpa
+  // via subscriber em IncomingSOSMount quando destination muda.
+  const acceptedSOS = useAcceptedSOSStore((s) => s.active);
 
   // Catalog preview integration. `previewRouteId` is a passive overlay flag
   // — non-null when the rider tapped "VER ROTA NO MAPA" on a CatalogResults
@@ -248,6 +270,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const clearWeatherRoute = useWeatherStore((s) => s.clearRoute);
 
   const activeMotorcycle = useMotorcycleStore(selectActiveMotorcycle);
+  // Rider profile feeds the landscape drawer header so we show the PILOT's
+  // name (and a "Meu Perfil" entry) instead of just the bike label.
+  const riderProfile = useRiderStore((s) => s.profile);
   const { derived } = useNavigationEngine();
 
   // Voice/comboio state — used both for the persistent top-bar badge
@@ -261,6 +286,10 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   // below drops anything stale so the map doesn't keep frozen pins after a
   // peer's device goes to sleep or loses GPS.
   const peerPositions = useVoiceGroupStore((s) => s.peerPositions);
+  // F30: respeita o toggle local de ocultar pins dos peers no mapa. NAO
+  // afeta o broadcast (os outros continuam me vendo) — so suprime a
+  // renderizacao dos PeerMemberMarker neste device.
+  const peerPinsHidden = useVoiceGroupStore((s) => s.peerPinsHidden);
   const purgeStalePeerPositions = useVoiceGroupStore(
     (s) => s.purgeStalePeerPositions,
   );
@@ -375,8 +404,8 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   // BikerMapView doesn't see a new array reference (and re-bind its
   // children) on every unrelated HomeScreen re-render.
   const peerMembersArray = useMemo(
-    () => Object.values(peerPositions),
-    [peerPositions],
+    () => (peerPinsHidden ? [] : Object.values(peerPositions)),
+    [peerPositions, peerPinsHidden],
   );
 
   // Pair each OSRM alternative with a fixed palette colour for the map.
@@ -701,6 +730,15 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     navigation.navigate('CatalogFilters');
   };
 
+  // Settings hub. Intentionally NOT movement-locked — the hub itself is
+  // read-only (status text + buttons) and its inner jump-offs (perfil /
+  // motos) already enforce their own lock. Forcing a lock here would also
+  // hide the "Sobre" credits when the rider is moving, which has no safety
+  // rationale.
+  const handleOpenSettings = (): void => {
+    navigation.navigate('Settings');
+  };
+
   const handleClearPreview = (): void => {
     clearPreview();
   };
@@ -880,6 +918,41 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     : 'INICIAR ROTA';
   const isStartDisabled = !previewMatch || !userPos || isFetchingRoute;
 
+  // Right-edge FAB column vertical offsets (recenter → comboio → menu).
+  // The bottombar height varies a lot across modes, so we shift the whole
+  // FAB column to stay ~24dp above whatever bottombar is currently shown:
+  //   - Landscape: bottombar is hidden → only clear gesture-nav insets.
+  //   - Preview (catalog metrics card + INICIAR ROTA): tallest portrait
+  //     mode (~220-260dp tall).
+  //   - Idle (DESTINO stacked above EXPLORAR compact): ~180-200dp tall.
+  //   - In-route (3 compact buttons in one row): shortest portrait
+  //     (~110-140dp tall).
+  // 70dp gap between FABs keeps a clean visual column (FAB = 56-64dp).
+  const recenterBottom: number = isLandscape
+    ? 24
+    : previewRouteId && !isNavigating
+      ? 240
+      : isNavigating
+        ? 140
+        : 200;
+  const comboioBottom: number = recenterBottom + 70;
+  const menuBottom: number = comboioBottom + 70;
+  // SETTINGS FAB is always visible (portrait + landscape) so the rider can
+  // jump to perfil / motos at any time. It sits ABOVE menu in landscape
+  // (the only mode where menu exists) and directly above COMBOIO in
+  // portrait — same 70dp gap as the rest of the column.
+  const settingsBottom: number = isLandscape
+    ? menuBottom + 70
+    : comboioBottom + 70;
+  // In landscape on phones with side gesture-nav (Samsung One UI, Android 12+
+  // bottom-edge swipe rotated), the right safe-area inset is non-zero. Without
+  // honoring it, the FAB column overlaps the gesture handle and taps get
+  // hijacked by the OS. We pad an extra `spacing.sm` so the FAB is visibly
+  // off the rail too.
+  const fabsRight: number = isLandscape
+    ? Math.max(spacing.lg, insets.right + spacing.sm)
+    : spacing.lg;
+
   return (
     <View style={styles.root} testID="screen-home">
       <View style={StyleSheet.absoluteFill}>
@@ -900,9 +973,35 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           weatherSegments={weatherRouteSegments ?? undefined}
           previewPolyline={previewPolyline}
           approachPolyline={approachPolyline}
+          sosAlertMarker={
+            acceptedSOS !== null
+              ? {
+                  latitude: acceptedSOS.latitude,
+                  longitude: acceptedSOS.longitude,
+                }
+              : null
+          }
           testID="home-map"
         />
       </View>
+
+      {isNavigating && tripStartedAt !== null ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.tripTimerSlot,
+            {
+              top: Math.max(spacing['2xl'], insets.top + spacing.sm),
+              left: Math.max(spacing.lg, insets.left + spacing.sm),
+            },
+          ]}
+        >
+          <TripTimerBadge
+            tripStartedAt={tripStartedAt}
+            etaSeconds={derived?.etaSeconds ?? null}
+          />
+        </View>
+      ) : null}
 
       {!isLandscape ? (
         <View
@@ -1040,7 +1139,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           ]}
           testID="btn-clear-preview"
         >
-          <Text style={styles.clearPreviewPillLabel}>Limpar preview</Text>
+          <CloseIcon size={20} color="#FFFFFF" />
         </Pressable>
       ) : null}
 
@@ -1048,6 +1147,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         <Pressable
           style={({ pressed }) => [
             styles.recenterFab,
+            { bottom: recenterBottom, right: fabsRight },
             pressed ? styles.recenterFabPressed : null,
           ]}
           android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: true }}
@@ -1056,15 +1156,14 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           accessibilityLabel="Recentralizar no meu local"
           testID="btn-recenter"
         >
-          <View style={styles.recenterRingOuter}>
-            <View style={styles.recenterDotInner} />
-          </View>
+          <CrosshairIcon size={26} color={colors.accent} />
         </Pressable>
       ) : null}
 
       <Pressable
         style={({ pressed }) => [
           styles.comboioFab,
+          { bottom: comboioBottom, right: fabsRight },
           pressed ? styles.comboioFabPressed : null,
         ]}
         android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: true }}
@@ -1073,7 +1172,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         accessibilityLabel="Abrir comboio de voz"
         testID="btn-open-comboio"
       >
-        <Text style={styles.comboioFabLabel}>COMBOIO</Text>
+        <ComboioIcon size={26} color={colors.textPrimary} />
       </Pressable>
 
       {!isLandscape && !(alternativesSheetOpen && routeAlternatives !== null) && !previewRouteId ? (
@@ -1120,22 +1219,30 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.actionsRow}>
               <View style={styles.gridCellCancel}>
                 <BigButton
-                  label="Cancelar"
+                  label="CANCELAR"
                   variant="secondary"
                   fullWidth
                   compact
+                  stacked
+                  leadingIcon={
+                    <CloseIcon size={22} color={colors.textPrimary} />
+                  }
                   onPress={handleCancelNavigation}
+                  accessibilityLabel="Cancelar navegação"
                   testID="btn-cancel-nav"
                 />
               </View>
               <View style={styles.gridSpacer} />
               <View style={styles.gridCell}>
                 <BigButton
-                  label="POSTOS"
+                  label="LUGARES"
                   variant="primary"
                   fullWidth
                   compact
+                  stacked
+                  leadingIcon={<MapPinIcon size={24} color="#FFFFFF" />}
                   onPress={handleOpenPostos}
+                  accessibilityLabel="Buscar lugares (postos, restaurantes, hoteis, pousadas, borracheiros, oficinas)"
                   testID="btn-open-postos"
                 />
               </View>
@@ -1146,7 +1253,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
                   variant="secondary"
                   fullWidth
                   compact
+                  stacked
+                  leadingIcon={
+                    <FuelDropIcon size={22} color={colors.textPrimary} />
+                  }
                   onPress={handleTanqueCheio}
+                  accessibilityLabel="Registrar tanque cheio"
                   testID="btn-tanque-cheio"
                 />
               </View>
@@ -1154,19 +1266,25 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           ) : (
             <View>
               <BigButton
-                label="ESCOLHER DESTINO"
+                label="DESTINO"
                 variant="primary"
                 fullWidth
+                leadingIcon={<MapPinIcon size={26} color="#FFFFFF" />}
                 onPress={handleChooseDestination}
+                accessibilityLabel="Escolher destino"
                 testID="btn-choose-destination"
               />
               <View style={styles.exploreButtonRow}>
                 <BigButton
-                  label="EXPLORAR VIAGENS"
+                  label="EXPLORAR"
                   variant="secondary"
                   fullWidth
                   compact
+                  leadingIcon={
+                    <CompassIcon size={22} color={colors.textPrimary} />
+                  }
                   onPress={handleExploreCatalog}
+                  accessibilityLabel="Explorar viagens do catálogo"
                   testID="btn-explore-catalog"
                 />
               </View>
@@ -1237,7 +1355,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             variant="primary"
             fullWidth
             disabled={isStartDisabled}
+            leadingIcon={<PlayIcon size={22} color="#FFFFFF" />}
             onPress={handleStartCatalogRoute}
+            accessibilityLabel="Iniciar rota selecionada"
             testID="btn-start-catalog-route"
           />
         </View>
@@ -1247,6 +1367,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         <Pressable
           style={({ pressed }) => [
             styles.menuFab,
+            { bottom: menuBottom, right: fabsRight },
             pressed ? styles.menuFabPressed : null,
           ]}
           android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: true }}
@@ -1255,14 +1376,27 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           accessibilityLabel="Abrir menu"
           testID="btn-open-menu"
         >
-          <View style={styles.menuGlyph}>
-            <View style={styles.menuGlyphBar} />
-            <View style={styles.menuGlyphBar} />
-            <View style={styles.menuGlyphBar} />
-          </View>
-          <Text style={styles.menuFabLabel}>MENU</Text>
+          <MenuIcon size={28} color="#FFFFFF" />
         </Pressable>
       ) : null}
+
+      {/* SETTINGS FAB — sempre visivel (portrait + paisagem). E o unico
+          ponto de re-entrada pra editar perfil / motos depois do onboarding,
+          entao nao pode esconder atras de um drawer modal. */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.settingsFab,
+          { bottom: settingsBottom, right: fabsRight },
+          pressed ? styles.settingsFabPressed : null,
+        ]}
+        android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: true }}
+        onPress={handleOpenSettings}
+        accessibilityRole="button"
+        accessibilityLabel="Abrir configuracoes"
+        testID="btn-open-settings"
+      >
+        <GearIcon size={24} color={colors.textPrimary} />
+      </Pressable>
 
       {isLandscape ? (
         <HomeMenuDrawer
@@ -1279,6 +1413,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             }}
             isGpsStale={isGpsStale}
             staleSeconds={staleSeconds}
+            riderDisplayName={riderProfile?.displayName ?? null}
             motoLabel={motoLabel}
             remainingAutonomyKm={remainingAutonomyKm}
             autonomyState={effectiveState}
@@ -1297,6 +1432,10 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             onTanqueCheio={handleTanqueCheio}
             onOpenComboio={handleOpenComboio}
             onExploreCatalog={handleExploreCatalog}
+            // onEditProfile intentionally NOT passed: the new SETTINGS FAB
+            // (always visible, portrait + paisagem) is the single source of
+            // truth for jumping into perfil / motos. Keeping it here would
+            // duplicate the affordance and split a11y / discoverability.
             closeDrawer={() => setMenuOpen(false)}
           />
         </HomeMenuDrawer>
@@ -1463,9 +1602,17 @@ const styles = StyleSheet.create({
   gridSpacer: {
     width: spacing.sm,
   },
+  tripTimerSlot: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
   recenterFab: {
     position: 'absolute',
     right: spacing.lg,
+    // `bottom` is supplied inline at the call site so the FAB can shift
+    // dynamically to clear the bottombar (which has 3 different heights
+    // across idle / preview / in-route portrait modes).
     bottom: 140,
     width: 56,
     height: 56,
@@ -1482,34 +1629,20 @@ const styles = StyleSheet.create({
   recenterFabPressed: {
     opacity: 0.7,
   },
-  recenterRingOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recenterDotInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.accent,
-  },
   comboioBadgeRow: {
     marginBottom: spacing.sm,
   },
-  // Stacked above the recenter FAB on the right edge. Smaller pill-shaped
-  // button so it doesn't fight with the primary destination CTA.
+  // Stacked above the recenter FAB on the right edge. Round 56dp so it
+  // matches the recenter FAB's diameter for a clean vertical FAB column.
+  // `bottom` is overridden inline (= recenterBottom + 70) so the stack
+  // stays glued to the recenter FAB across portrait modes.
   comboioFab: {
     position: 'absolute',
     right: spacing.lg,
     bottom: 210,
-    minWidth: 84,
-    height: 44,
-    paddingHorizontal: spacing.md,
-    borderRadius: 22,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1520,16 +1653,12 @@ const styles = StyleSheet.create({
   comboioFabPressed: {
     opacity: 0.7,
   },
-  comboioFabLabel: {
-    color: colors.textPrimary,
-    fontSize: typography.sizes.sm,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
   // Landscape-only round FAB that opens the HomeMenuDrawer. Stacked above
   // the COMBOIO FAB on the right edge so the order bottom→top reads:
-  // recenter (140) → COMBOIO (210) → MENU (280). Slightly bigger than the
-  // recenter FAB (64dp vs 56dp) so it's easier to find while moving.
+  // recenter → COMBOIO → MENU. `bottom` is overridden inline
+  // (= comboioBottom + 70) so the stack glues to the rest of the column.
+  // Slightly bigger than the recenter FAB (64dp vs 56dp) so it's easier
+  // to find while moving.
   menuFab: {
     position: 'absolute',
     right: spacing.lg,
@@ -1545,45 +1674,45 @@ const styles = StyleSheet.create({
   menuFabPressed: {
     opacity: 0.75,
   },
-  menuGlyph: {
-    width: 22,
-    height: 16,
-    justifyContent: 'space-between',
+  // SETTINGS FAB — smaller (44dp) than the recenter/comboio column (56dp)
+  // so it visually reads as a secondary entry point, not a primary CTA.
+  // Subtle border to match the recenter FAB chrome.
+  settingsFab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: 350,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.fab,
   },
-  menuGlyphBar: {
-    height: 2,
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-  },
-  menuFabLabel: {
-    color: '#FFFFFF',
-    fontSize: typography.sizes.xs,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginTop: 2,
+  settingsFabPressed: {
+    opacity: 0.7,
   },
   exploreButtonRow: {
     marginTop: spacing.sm,
   },
+  // Round 44dp close button replacing the old "Limpar preview" pill. We
+  // keep it self-centred horizontally and accent-coloured so it reads as
+  // the only top-of-map dismissal control when a preview is showing.
   clearPreviewPill: {
     position: 'absolute',
     alignSelf: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...elevation.fab,
   },
   clearPreviewPillPressed: {
     opacity: 0.8,
-  },
-  clearPreviewPillLabel: {
-    color: '#FFFFFF',
-    fontSize: typography.caption.fontSize,
-    fontWeight: '700',
-    lineHeight: typography.caption.lineHeight,
-    letterSpacing: 0.5,
   },
   // Compact card above the INICIAR ROTA button. Shows OSRM-derived metrics
   // (approach distance/eta + route distance/eta) or a "calculando" state.

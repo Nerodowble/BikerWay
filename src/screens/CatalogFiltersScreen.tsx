@@ -15,12 +15,14 @@ import { RadioRow } from '@/shared/components/catalog/RadioRow';
 import { Chip } from '@/shared/components/catalog/Chip';
 import { colors, radius, spacing, typography } from '@/shared/theme';
 import { nominatimClient } from '@/infrastructure/geocoding/nominatimClient';
+import { DEFAULT_FUEL_PRICE_REAIS } from '@/domains/catalog/cost';
 import { useCatalogStore } from '@/state/catalogStore';
 import { useNavigationStore } from '@/state/navigationStore';
 import {
   selectActiveMotorcycle,
   useMotorcycleStore,
 } from '@/state/motorcycleStore';
+import { useRiderStore } from '@/state/riderStore';
 import {
   calculateMaxAutonomy,
   calculateSafeAutonomy,
@@ -70,6 +72,10 @@ export const CatalogFiltersScreen: React.FC<Props> = ({ navigation }) => {
   const userPos = useNavigationStore((s) => s.currentPosition);
   const motorcycles = useMotorcycleStore((s) => s.motorcycles);
   const activeMoto = useMotorcycleStore(selectActiveMotorcycle);
+  // Rider profile is consulted to pre-fill the custom-origin city input when
+  // the rider switches away from GPS. We deliberately do NOT auto-flip the
+  // mode to 'city' — that would override the GPS default surprisingly.
+  const riderProfile = useRiderStore((s) => s.profile);
 
   const setFilters = useCatalogStore((s) => s.setFilters);
   const runSearch = useCatalogStore((s) => s.runSearch);
@@ -77,6 +83,9 @@ export const CatalogFiltersScreen: React.FC<Props> = ({ navigation }) => {
   const [originMode, setOriginMode] = useState<OriginMode>('gps');
   const [cityQuery, setCityQuery] = useState<string>('');
   const [budgetText, setBudgetText] = useState<string>('');
+  const [fuelPriceText, setFuelPriceText] = useState<string>(() =>
+    DEFAULT_FUEL_PRICE_REAIS.toFixed(2).replace('.', ','),
+  );
   const [pavimentoChoice, setPavimentoChoice] =
     useState<PavimentoChoice>('qualquer');
   const [nivelChoice, setNivelChoice] = useState<NivelChoice>('qualquer');
@@ -97,6 +106,26 @@ export const CatalogFiltersScreen: React.FC<Props> = ({ navigation }) => {
     navigation.goBack();
   }, [navigation]);
 
+  // Pre-fill the custom-city input when the rider switches to "Digitar outra
+  // cidade de partida". We only fill when the input is EMPTY — typing a real
+  // value and then toggling back to GPS should not be silently overwritten
+  // when the rider returns to the city mode.
+  const handleSelectOriginMode = useCallback(
+    (mode: OriginMode) => {
+      setOriginMode(mode);
+      if (
+        mode === 'city' &&
+        cityQuery.trim().length === 0 &&
+        riderProfile &&
+        riderProfile.cidade.length > 0 &&
+        riderProfile.estado.length > 0
+      ) {
+        setCityQuery(`${riderProfile.cidade}, ${riderProfile.estado}`);
+      }
+    },
+    [cityQuery, riderProfile],
+  );
+
   const handleSubmit = useCallback(async () => {
     setError(null);
     if (!selectedMoto) {
@@ -107,6 +136,11 @@ export const CatalogFiltersScreen: React.FC<Props> = ({ navigation }) => {
     // A blank/zero budget is allowed (treated as "sem limite") so the rider
     // can browse the catalog without committing to a value up-front.
     const budgetValue = Number.isFinite(budget) && budget > 0 ? budget : 0;
+    const fuelPrice = Number.parseFloat(fuelPriceText.replace(',', '.'));
+    const fuelPriceValue =
+      Number.isFinite(fuelPrice) && fuelPrice > 0
+        ? fuelPrice
+        : DEFAULT_FUEL_PRICE_REAIS;
 
     let origin: { latitude: number; longitude: number } | null = null;
     if (originMode === 'gps') {
@@ -157,6 +191,7 @@ export const CatalogFiltersScreen: React.FC<Props> = ({ navigation }) => {
       motoSafeAutonomyKm: selectedSafeAutonomy,
       pavimento: pavimentoChoice === 'qualquer' ? null : pavimentoChoice,
       nivelCurvas: nivelChoice === 'qualquer' ? null : nivelChoice,
+      fuelPricePerLiter: fuelPriceValue,
     });
     runSearch();
     setIsSubmitting(false);
@@ -164,6 +199,7 @@ export const CatalogFiltersScreen: React.FC<Props> = ({ navigation }) => {
   }, [
     budgetText,
     cityQuery,
+    fuelPriceText,
     navigation,
     nivelChoice,
     originMode,
@@ -206,7 +242,7 @@ export const CatalogFiltersScreen: React.FC<Props> = ({ navigation }) => {
               key={opt.value}
               label={opt.label}
               selected={originMode === opt.value}
-              onPress={() => setOriginMode(opt.value)}
+              onPress={() => handleSelectOriginMode(opt.value)}
               testID={`origin-${opt.value}`}
             />
           ))}
@@ -235,6 +271,22 @@ export const CatalogFiltersScreen: React.FC<Props> = ({ navigation }) => {
           keyboardType="decimal-pad"
           testID="input-budget"
         />
+
+        <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
+          PREÇO MÉDIO DA GASOLINA NA SUA REGIÃO
+        </Text>
+        <LabeledInput
+          label="R$/litro"
+          value={fuelPriceText}
+          onChangeText={setFuelPriceText}
+          placeholder="6,50"
+          keyboardType="decimal-pad"
+          testID="input-fuel-price"
+        />
+        <Text style={styles.helperText}>
+          Usado pra calcular o custo estimado de cada rota. Ajuste pro valor
+          médio que você paga.
+        </Text>
 
         <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
           MOTO SELECIONADA

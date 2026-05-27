@@ -10,3 +10,5 @@ export { PermissionBanner } from './PermissionBanner';
 export type { PermissionBannerProps } from './PermissionBanner';
 export { GpsLostBadge } from './GpsLostBadge';
 export type { GpsLostBadgeProps } from './GpsLostBadge';
+export { TripTimerBadge } from './TripTimerBadge';
+export type { TripTimerBadgeProps } from './TripTimerBadge';

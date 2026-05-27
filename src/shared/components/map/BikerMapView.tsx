@@ -28,6 +28,7 @@ import {
 } from './MapTileConfig';
 import { MotorcycleMarker } from './MotorcycleMarker';
 import { DestinationMarker } from './DestinationMarker';
+import { SOSAlertMarker } from './SOSAlertMarker';
 import { RoutePolyline } from './RoutePolyline';
 import { AlternativeRoutePolyline } from './AlternativeRoutePolyline';
 import { WeatherSegmentPolyline } from './WeatherSegmentPolyline';
@@ -123,6 +124,13 @@ export interface BikerMapViewProps {
    * camera fits both at once so the rider sees the entire trip envelope.
    */
   approachPolyline?: Array<{ latitude: number; longitude: number }>;
+  /**
+   * Quando preenchido, substitui o `DestinationMarker` por um
+   * `SOSAlertMarker` (pilula vermelha "SOS") nas coordenadas dadas.
+   * Usado quando o piloto aceita um SOS recebido — visualmente comunica
+   * que o destino atual e uma emergencia, nao uma rota planejada (F29.3).
+   */
+  sosAlertMarker?: { latitude: number; longitude: number } | null;
   testID?: string;
 }
 
@@ -189,6 +197,7 @@ export const BikerMapView = forwardRef<BikerMapHandle, BikerMapViewProps>(
       weatherSegments,
       previewPolyline,
       approachPolyline,
+      sosAlertMarker,
       testID,
     },
     ref,
@@ -340,7 +349,14 @@ export const BikerMapView = forwardRef<BikerMapHandle, BikerMapViewProps>(
 
           {userPosition ? <MotorcycleMarker position={userPosition} /> : null}
 
-          {destination ? <DestinationMarker position={destination} /> : null}
+          {sosAlertMarker !== undefined && sosAlertMarker !== null ? (
+            <SOSAlertMarker
+              latitude={sosAlertMarker.latitude}
+              longitude={sosAlertMarker.longitude}
+            />
+          ) : destination ? (
+            <DestinationMarker position={destination} />
+          ) : null}
 
           {routeCoordinates && routeCoordinates.length >= 2 ? (
             <RoutePolyline coordinates={routeCoordinates} />

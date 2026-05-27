@@ -1,9 +1,12 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Linking,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -90,6 +93,34 @@ const CATEGORY_COPY: Record<PoiCategory, CategoryCopy> = {
     loading: 'Buscando oficinas...',
     rowAccessibilityPrefix: 'Oficina',
   },
+  restaurante: {
+    title: 'Restaurantes próximos',
+    subtitleAlong: 'Buffer de 2,5 km na rota restante',
+    subtitleNearby: 'Restaurantes num raio de 8 km da sua posição',
+    emptyAlong:
+      'Nenhum restaurante no buffer da rota — tente "Próximos a mim"',
+    emptyNearby: 'Nenhum restaurante encontrado no raio de 8 km',
+    loading: 'Buscando restaurantes...',
+    rowAccessibilityPrefix: 'Restaurante',
+  },
+  hotel: {
+    title: 'Hotéis próximos',
+    subtitleAlong: 'Buffer de 5 km na rota restante',
+    subtitleNearby: 'Hotéis num raio de 20 km da sua posição',
+    emptyAlong: 'Nenhum hotel no buffer da rota — tente "Próximos a mim"',
+    emptyNearby: 'Nenhum hotel encontrado no raio de 20 km',
+    loading: 'Buscando hotéis...',
+    rowAccessibilityPrefix: 'Hotel',
+  },
+  pousada: {
+    title: 'Pousadas próximas',
+    subtitleAlong: 'Buffer de 5 km na rota restante',
+    subtitleNearby: 'Pousadas num raio de 20 km da sua posição',
+    emptyAlong: 'Nenhuma pousada no buffer da rota — tente "Próximos a mim"',
+    emptyNearby: 'Nenhuma pousada encontrada no raio de 20 km',
+    loading: 'Buscando pousadas...',
+    rowAccessibilityPrefix: 'Pousada',
+  },
 };
 
 const CATEGORY_CHIPS: ReadonlyArray<{
@@ -98,6 +129,21 @@ const CATEGORY_CHIPS: ReadonlyArray<{
   testID: string;
 }> = [
   { category: 'fuel', label: 'POSTOS', testID: 'poi-sheet-category-fuel' },
+  {
+    category: 'restaurante',
+    label: 'COMIDA',
+    testID: 'poi-sheet-category-restaurante',
+  },
+  {
+    category: 'hotel',
+    label: 'HOTÉIS',
+    testID: 'poi-sheet-category-hotel',
+  },
+  {
+    category: 'pousada',
+    label: 'POUSADAS',
+    testID: 'poi-sheet-category-pousada',
+  },
   {
     category: 'tyres',
     label: 'BORRACHEIROS',
@@ -109,6 +155,57 @@ const CATEGORY_CHIPS: ReadonlyArray<{
     testID: 'poi-sheet-category-mechanic',
   },
 ];
+
+/**
+ * F31 — Formata distancia em metros pra string legivel. Sub-1km mostra
+ * em metros (resolucao melhor); acima de 1km vira "X,X km" pra evitar
+ * confusao perceptual ("4710 m" lendo como 4710 km).
+ */
+function formatDistanceMeters(meters: number): string {
+  const safe = Number.isFinite(meters) && meters >= 0 ? meters : 0;
+  if (safe < 1000) return `${Math.round(safe)} m`;
+  if (safe < 10000) return `${(safe / 1000).toFixed(1).replace('.', ',')} km`;
+  return `${Math.round(safe / 1000)} km`;
+}
+
+/**
+ * F31 — Constroi a URL do Google Maps pra abrir o POI no app nativo
+ * (instalado na maioria dos celulares).
+ *
+ * Importante: usamos APENAS as coordenadas no `query`. Embed do `name`
+ * antes (ex: "Hotel Sunshine -23.6,-46.6") fazia o Google interpretar
+ * como busca textual e resolver pro "Hotel Sunshine" mais famoso (em
+ * Porto Seguro), ignorando as coords como filtro.
+ *
+ * Documentacao oficial:
+ *   https://developers.google.com/maps/documentation/urls/get-started#search-action
+ *
+ * Quando `query` e estritamente "lat,lng", Google dropa pin no ponto
+ * exato e mostra o reverse-geocode (nome do estabelecimento naquele
+ * endereco, fotos, reviews, etc) — exatamente o que queremos. Truncamos
+ * em 6 casas (~11cm de precisao) pra deixar a URL curta.
+ */
+// Exportado pra teste — preserva a invariante de "so coords no query"
+// (sem nome). Regredir essa funcao re-introduz o bug F31 do Hotel
+// Sunshine→Porto Seguro.
+export function buildGoogleMapsUrl(poi: {
+  latitude: number;
+  longitude: number;
+}): string {
+  const lat = poi.latitude.toFixed(6);
+  const lng = poi.longitude.toFixed(6);
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+function openInGoogleMaps(poi: FilteredFuelPoi): void {
+  const url = buildGoogleMapsUrl(poi);
+  void Linking.openURL(url).catch(() => {
+    Alert.alert(
+      'Erro',
+      'Não foi possível abrir o Google Maps. Verifique se o app está instalado.',
+    );
+  });
+}
 
 /**
  * Bottom-sheet modal that lists POIs (fuel stations, tyre shops, or
@@ -166,21 +263,36 @@ export const PoiListSheet: React.FC<PoiListSheetProps> = ({
           {item.name}
         </Text>
         <Text style={styles.rowDistanceUser} numberOfLines={1}>
-          {`${Math.round(item.distanceFromUserMeters)} m da sua posição`}
+          {`${formatDistanceMeters(item.distanceFromUserMeters)} da sua posição`}
         </Text>
         <Text style={styles.rowDistanceRoute} numberOfLines={1}>
-          {`${Math.round(item.distanceToRouteMeters)} m da rota`}
+          {`${formatDistanceMeters(item.distanceToRouteMeters)} da rota`}
         </Text>
-        {isSelected && onDetour ? (
-          <View style={styles.rowDetourWrap}>
+        {isSelected ? (
+          <View style={styles.rowActionsWrap}>
+            {/* F31 — acao primaria pra qualquer categoria: abrir no Google
+                Maps. Da acesso a fotos, reviews, precos e direcoes via app
+                nativo, sem precisar embutir tudo aqui. */}
             <BigButton
-              label="Desviar para este local"
+              label="Ver no Google Maps"
               variant="primary"
               fullWidth
               compact
-              onPress={() => onDetour(item)}
-              testID={`poi-row-detour-${item.id}`}
+              onPress={() => openInGoogleMaps(item)}
+              testID={`poi-row-google-maps-${item.id}`}
             />
+            {onDetour ? (
+              <View style={styles.rowActionSpacer}>
+                <BigButton
+                  label="Desviar para este local"
+                  variant="secondary"
+                  fullWidth
+                  compact
+                  onPress={() => onDetour(item)}
+                  testID={`poi-row-detour-${item.id}`}
+                />
+              </View>
+            ) : null}
           </View>
         ) : null}
       </Pressable>
@@ -227,9 +339,16 @@ export const PoiListSheet: React.FC<PoiListSheetProps> = ({
               "what am I searching for" choice is visually primary, and the
               "where" toggle is read as a refinement. Rendered only when a
               category-change handler is wired; legacy parents still get the
-              fuel-only sheet without extra chrome. */}
+              fuel-only sheet without extra chrome. F31: chips passaram a
+              ser 6, entao envolvemos num ScrollView horizontal pra caber
+              em portrait estreito sem quebrar layout. */}
           {onSearchCategoryChange ? (
-            <View style={styles.categoryRow} testID="poi-sheet-category-row">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryRow}
+              testID="poi-sheet-category-row"
+            >
               {CATEGORY_CHIPS.map((chip) => {
                 const isActive = searchCategory === chip.category;
                 return (
@@ -256,7 +375,7 @@ export const PoiListSheet: React.FC<PoiListSheetProps> = ({
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
           ) : null}
 
           <View style={styles.toggleRow}>
@@ -404,17 +523,21 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
   },
-  // Category chips row (POSTOS / BORRACHEIROS / OFICINAS). Sits above the
-  // along-route/nearby toggle so the category choice is read as primary.
+  // Category chips row (POSTOS / COMIDA / HOTEIS / POUSADAS / BORRACHEIROS /
+  // OFICINAS). Sits above the along-route/nearby toggle. F31 — passou a ser
+  // horizontal scrollable em vez de flex:1 quebrando linha; assim cabe 6
+  // categorias em portrait estreito sem encolher cada chip a ponto de
+  // ilegibilidade. paddingRight no contentContainerStyle e implicito via
+  // gap.
   categoryRow: {
     flexDirection: 'row',
     gap: spacing.xs,
     marginBottom: spacing.sm,
+    paddingRight: spacing.lg, // espaco no fim pra ultimo chip nao colar na borda
   },
   categoryChip: {
-    flex: 1,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
@@ -508,6 +631,13 @@ const styles = StyleSheet.create({
   rowDetourWrap: {
     marginTop: spacing.sm,
     alignSelf: 'stretch',
+  },
+  rowActionsWrap: {
+    marginTop: spacing.sm,
+    alignSelf: 'stretch',
+  },
+  rowActionSpacer: {
+    marginTop: spacing.xs,
   },
   rowName: {
     color: colors.textPrimary,

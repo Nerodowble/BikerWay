@@ -11,6 +11,12 @@ let globalVoiceHandle: JitsiWebViewHandle | null = null;
 export interface VoiceController {
   toggleAudio: () => void;
   setAudioMuted: (muted: boolean) => void;
+  /**
+   * F30: muta/desmuta o audio recebido dos peers SOMENTE neste device.
+   * Outros peers nao percebem — sao os `<audio>` elements da WebView que
+   * recebem `audio.muted = true`.
+   */
+  setIncomingAudioMuted: (muted: boolean) => void;
   hangup: () => void;
 }
 
@@ -26,6 +32,7 @@ export function getVoiceController(): VoiceController | null {
   return {
     toggleAudio: () => handle.toggleAudio(),
     setAudioMuted: (muted: boolean) => handle.setAudioMuted(muted),
+    setIncomingAudioMuted: (muted: boolean) => handle.setIncomingAudioMuted(muted),
     hangup: () => handle.hangup(),
   };
 }
@@ -62,6 +69,9 @@ export const VoiceSessionMount: React.FC = () => {
   // Reading status here drives the periodic purge threshold so peer pins
   // outlive a transient reconnect instead of disappearing after 15s.
   const status = useVoiceGroupStore((s) => s.status);
+  // F30: assinatura do toggle de mute incoming. Quando o piloto liga,
+  // propagamos pra WebView que seta audio.muted=true em todos os <audio>.
+  const incomingAudioMuted = useVoiceGroupStore((s) => s.incomingAudioMuted);
 
   const localRef = useRef<JitsiWebViewHandle | null>(null);
 
@@ -170,6 +180,17 @@ export const VoiceSessionMount: React.FC = () => {
     }, BROADCAST_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [token]);
+
+  // F30: propaga o toggle de mute incoming pra WebView. Roda toda vez que
+  // o store muda E quando a WebView remonta (caso o piloto entre num
+  // comboio com a pref ja ligada — unlikely com o reset em leaveComboio,
+  // mas defensivo). Sem cleanup explicito: a WebView some quando token=null
+  // e o estado do <audio> nao precisa ser revertido pq os elements morrem
+  // junto.
+  useEffect(() => {
+    if (!token) return;
+    localRef.current?.setIncomingAudioMuted(incomingAudioMuted);
+  }, [incomingAudioMuted, token]);
 
   // Periodic peer-pin purge. The threshold is RAISED during silent reconnect
   // so a 5-30s dead-zone doesn't wipe everyone from the map. Status is read

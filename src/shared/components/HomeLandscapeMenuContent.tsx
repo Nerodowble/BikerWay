@@ -26,6 +26,11 @@ export interface HomeLandscapeMenuContentProps {
   isGpsStale: boolean;
   staleSeconds: number;
 
+  // Rider profile — when null we render a "Convidado" + "Criar perfil"
+  // affordance instead of the regular header. Kept optional so existing
+  // tests / callers that haven't wired this up still compile.
+  riderDisplayName?: string | null;
+
   // Motorcycle + autonomy + weather
   motoLabel: string;
   remainingAutonomyKm: number;
@@ -58,6 +63,12 @@ export interface HomeLandscapeMenuContentProps {
    * button is hidden entirely.
    */
   onExploreCatalog?: () => void;
+  /**
+   * Opens the rider profile screen. Optional so existing callers / tests
+   * that don't wire it up still compile (in that case the "Meu Perfil"
+   * entry is hidden).
+   */
+  onEditProfile?: () => void;
 
   /**
    * Closes the parent drawer. Wired by the parent so each action button can
@@ -87,6 +98,7 @@ export const HomeLandscapeMenuContent: React.FC<
   onOpenSettings,
   isGpsStale,
   staleSeconds,
+  riderDisplayName,
   motoLabel,
   remainingAutonomyKm,
   autonomyState,
@@ -105,6 +117,7 @@ export const HomeLandscapeMenuContent: React.FC<
   onTanqueCheio,
   onOpenComboio,
   onExploreCatalog,
+  onEditProfile,
   closeDrawer,
 }) => {
   const autonomyKmRounded = Math.max(
@@ -120,14 +133,23 @@ export const HomeLandscapeMenuContent: React.FC<
   const autonomySubtitle =
     autonomyState === 'danger' ? 'km — RESERVA' : 'km restantes';
 
-  // Avatar initial: there is no rider name in props, so we use the moto
-  // label's first letter as a stand-in. Falls back to "M" to avoid an empty
-  // circle when the label is empty/whitespace.
+  // Avatar initial: prefer the rider's name (set via RiderProfileScreen) so
+  // the drawer reads as the PILOT's identity, not the bike's. Falls back
+  // to "?" when the rider has not configured a profile yet (matches the
+  // "Convidado" header rendered below in that case).
+  const trimmedRiderName = (riderDisplayName ?? '').trim();
+  const hasRider = trimmedRiderName.length > 0;
   const avatarInitial = useMemo(() => {
-    const trimmed = motoLabel.trim();
-    const first = trimmed.length > 0 ? trimmed.charAt(0) : '';
-    return first ? first.toUpperCase() : 'M';
-  }, [motoLabel]);
+    if (hasRider) return trimmedRiderName.charAt(0).toUpperCase();
+    // Stand-in only when there is no rider profile yet.
+    const trimmedMoto = motoLabel.trim();
+    const first = trimmedMoto.length > 0 ? trimmedMoto.charAt(0) : '';
+    return first ? first.toUpperCase() : '?';
+  }, [hasRider, trimmedRiderName, motoLabel]);
+  // Header title prioritises the rider's name; the moto label moves down to
+  // a secondary line under it. When there is no rider yet, we show
+  // "Convidado" + a "Criar perfil" CTA (rendered inline below).
+  const headerPrimary = hasRider ? trimmedRiderName : 'Convidado';
 
   const hasAlerts = permission !== 'granted' || isGpsStale;
   const hasComboio = voiceTokenCode !== null;
@@ -145,9 +167,25 @@ export const HomeLandscapeMenuContent: React.FC<
         <View style={styles.avatar} testID="drawer-rider-avatar">
           <Text style={styles.avatarInitial}>{avatarInitial}</Text>
         </View>
-        <Text style={styles.motoLabel} numberOfLines={1}>
-          {motoLabel}
-        </Text>
+        <View style={styles.headerTextColumn}>
+          <Text
+            style={styles.headerPrimaryText}
+            numberOfLines={1}
+            testID="drawer-rider-name"
+          >
+            {headerPrimary}
+          </Text>
+          {/* motoLabel stays as the secondary line — it answers the "which
+              bike are we on?" question without forcing the rider's name to
+              fight for top billing. */}
+          <Text
+            style={styles.motoLabel}
+            numberOfLines={1}
+            testID="drawer-moto-label"
+          >
+            {motoLabel}
+          </Text>
+        </View>
         <Pressable
           onPress={onEditMoto}
           hitSlop={12}
@@ -161,6 +199,33 @@ export const HomeLandscapeMenuContent: React.FC<
           <Text style={styles.editMotoPillLabel}>Editar moto</Text>
         </Pressable>
       </View>
+      {onEditProfile ? (
+        <View style={styles.profileActionRow}>
+          <Pressable
+            onPress={() => {
+              closeDrawer();
+              onEditProfile();
+            }}
+            hitSlop={12}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.profilePill,
+              hasRider ? null : styles.profilePillCta,
+              pressed ? styles.profilePillPressed : null,
+            ]}
+            testID="link-edit-profile-drawer"
+          >
+            <Text
+              style={[
+                styles.profilePillLabel,
+                hasRider ? null : styles.profilePillLabelCta,
+              ]}
+            >
+              {hasRider ? 'Meu Perfil' : 'Criar perfil'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
       <View style={styles.separator} />
 
       {/* 2. Alerts slot — collapses entirely when there is nothing to show */}
@@ -286,12 +351,13 @@ export const HomeLandscapeMenuContent: React.FC<
           </View>
           <View style={styles.primaryActionRow}>
             <BigButton
-              label="POSTOS"
+              label="LUGARES"
               variant="primary"
               fullWidth
               onPress={() => {
-                // POSTOS opens a separate bottom sheet; the parent decides
-                // whether to keep the drawer open (it currently does).
+                // F31: botao generalizado pra abrir o bottom sheet de POIs
+                // (postos / comida / hoteis / pousadas / borracheiros /
+                // oficinas). O parent decide se mantem o drawer aberto.
                 onOpenPostos();
               }}
               testID="btn-open-postos-drawer"
@@ -406,13 +472,53 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 22,
   },
-  motoLabel: {
+  headerTextColumn: {
     flex: 1,
-    color: colors.textPrimary,
-    fontSize: typography.navSecondary.fontSize,
-    fontWeight: typography.navSecondary.fontWeight,
-    lineHeight: typography.navSecondary.lineHeight,
     marginRight: spacing.sm,
+  },
+  headerPrimaryText: {
+    color: colors.textPrimary,
+    fontSize: typography.navPrimary.fontSize,
+    fontWeight: typography.navPrimary.fontWeight,
+    lineHeight: typography.navPrimary.lineHeight,
+  },
+  motoLabel: {
+    color: colors.textSecondary,
+    fontSize: typography.caption.fontSize,
+    fontWeight: typography.caption.fontWeight,
+    lineHeight: typography.caption.lineHeight,
+    marginTop: 2,
+  },
+  profileActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: spacing.xs,
+  },
+  profilePill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  // Highlighted variant rendered when no rider profile exists yet — the
+  // accent border tells first-run users they should tap this entry first.
+  profilePillCta: {
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(255,107,0,0.10)',
+  },
+  profilePillPressed: {
+    opacity: 0.7,
+  },
+  profilePillLabel: {
+    color: colors.accent,
+    fontSize: typography.caption.fontSize,
+    fontWeight: typography.caption.fontWeight,
+    lineHeight: typography.caption.lineHeight,
+  },
+  profilePillLabelCta: {
+    fontWeight: '800',
   },
   editMotoPill: {
     paddingHorizontal: spacing.md,

@@ -1,0 +1,242 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bikerway.app/schemas/catalog-route.schema.json",
+  "title": "BikerwayCatalogRoute",
+  "description": "Schema de uma rota icônica do catálogo BikerWay. Os campos sob 'required' são os MÍNIMOS aceitos pelo app hoje (mesmo shape consumido por src/domains/catalog/types.ts). Os campos em 'opcionais_recomendados' são extensões sugeridas para a próxima rodada de curadoria — eles ainda não são lidos pelo app, mas devem ser preenchidos pelo LLM para que a próxima migração do domínio os consuma sem retrabalho.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "rota_id",
+      "nome_rota",
+      "estado_pais",
+      "coordenada_inicio",
+      "coordenada_fim",
+      "distancia_total_km",
+      "total_pedagios_moto_reais",
+      "caracteristicas",
+      "interconexoes_ids",
+      "pontos_apoio_homologados",
+      "polilinha_simplificada"
+    ],
+    "properties": {
+      "rota_id": {
+        "type": "string",
+        "description": "Identificador único em kebab-case, terminando com sigla do estado. Ex: 'serra-do-rio-do-rastro-sc'.",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+        "minLength": 3,
+        "maxLength": 80
+      },
+      "nome_rota": {
+        "type": "string",
+        "description": "Nome humano da rota, idealmente com a sigla da rodovia entre parênteses. Ex: 'Serra do Rio do Rastro (SC-390)'.",
+        "minLength": 3,
+        "maxLength": 120
+      },
+      "estado_pais": {
+        "type": "string",
+        "description": "Sigla(s) do(s) estado(s) + país. Ex: 'SC, Brasil' ou 'MG/SP/RJ, Brasil'.",
+        "pattern": "^[A-Z]{2}(/[A-Z]{2})*, Brasil$"
+      },
+      "coordenada_inicio": { "$ref": "#/definitions/coordenadaCidade" },
+      "coordenada_fim":    { "$ref": "#/definitions/coordenadaCidade" },
+      "distancia_total_km": {
+        "type": "number",
+        "description": "Distância oficial da rota em km, validada contra Google Maps ou OSRM.",
+        "exclusiveMinimum": 0,
+        "maximum": 3000
+      },
+      "total_pedagios_moto_reais": {
+        "type": "number",
+        "description": "Soma de todos os pedágios moto (categoria 5 ANTT) para UMA passagem só (one-way). O matcher dobra esse valor ao calcular o custo round-trip. Zero é válido para rotas sem pedágio. Quando 'pedagios_detalhados' está presente, este total DEVE bater com a soma de pedagios_detalhados[].valor_moto_reais (tolerância R$ 0,50).",
+        "minimum": 0,
+        "maximum": 500
+      },
+      "caracteristicas": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tipo_pavimento", "nivel_curvas", "trecho_critico_sem_posto_km"],
+        "properties": {
+          "tipo_pavimento": {
+            "type": "string",
+            "enum": ["asfalto", "misto", "terra"],
+            "description": "'asfalto' = 100% pavimentado; 'misto' = trechos de terra batida ou paralelepípedo intercalados; 'terra' = predominantemente não pavimentada (uso restrito, exige justificativa)."
+          },
+          "nivel_curvas": {
+            "type": "string",
+            "enum": ["baixo", "medio", "alto"],
+            "description": "'baixo' = predominantemente retas; 'medio' = ondulada com curvas suaves; 'alto' = serra com curvas fechadas e/ou ferradura."
+          },
+          "trecho_critico_sem_posto_km": {
+            "type": "number",
+            "description": "Maior distância contínua entre dois postos de gasolina (amenity=fuel no OSM) ao longo do trajeto. Define a flag de alerta_autonomia no app.",
+            "minimum": 0,
+            "maximum": 500
+          }
+        }
+      },
+      "interconexoes_ids": {
+        "type": "array",
+        "description": "rota_id de outras rotas do catálogo que conectam fisicamente nesta rota. Pode estar vazio. Não precisa apontar para rotas que ainda não existem; mas ao gerar uma rota nova é boa prática listar conexões esperadas.",
+        "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "uniqueItems": true,
+        "maxItems": 20
+      },
+      "pontos_apoio_homologados": {
+        "type": "array",
+        "description": "Lista curada de paradas relevantes (posto, mirante, restaurante, oficina, hotel). Mínimo 1, máximo 12 por rota. Pelo menos 1 deve ser do tipo 'posto_gasolina'.",
+        "minItems": 1,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tipo", "nome", "latitude", "longitude", "descricao_biker"],
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": ["posto_gasolina", "mirante", "restaurante", "oficina_moto", "hotel", "ponto_historico"]
+            },
+            "nome":      { "type": "string", "minLength": 3, "maxLength": 120 },
+            "latitude":  { "$ref": "#/definitions/latitudeBR" },
+            "longitude": { "$ref": "#/definitions/longitudeBR" },
+            "descricao_biker": {
+              "type": "string",
+              "description": "Por que esse ponto importa para um motociclista (estacionamento, ar comprimido, segurança, vista). 1 a 3 frases.",
+              "minLength": 20,
+              "maxLength": 400
+            }
+          }
+        }
+      },
+      "polilinha_simplificada": {
+        "type": "array",
+        "description": "Aproximação geométrica da rota em 5 a 10 pontos. O primeiro ponto DEVE coincidir com coordenada_inicio e o último com coordenada_fim (tolerância de 0.01 grau).",
+        "minItems": 5,
+        "maxItems": 10,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lat", "lng"],
+          "properties": {
+            "lat": { "$ref": "#/definitions/latitudeBR" },
+            "lng": { "$ref": "#/definitions/longitudeBR" }
+          }
+        }
+      },
+
+      "ultima_revisao": {
+        "type": "string",
+        "format": "date",
+        "description": "OPCIONAL (recomendado a partir desta rodada). Data ISO YYYY-MM-DD da última checagem manual dos dados.",
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+      },
+      "confiabilidade": {
+        "type": "string",
+        "enum": ["alta", "media", "baixa"],
+        "description": "OPCIONAL. 'alta' = cruzou >=3 fontes oficiais; 'media' = 2 fontes; 'baixa' = sem confirmação cruzada (dado provisório)."
+      },
+      "dificuldade": {
+        "type": "string",
+        "enum": ["iniciante", "intermediario", "avancado"],
+        "description": "OPCIONAL. Sugestão de perfil de piloto: 'iniciante' (até 250cc, asfalto, sem serra fechada), 'intermediario' (curvas + algum trecho exposto), 'avancado' (serra técnica, neblina, terra)."
+      },
+      "melhor_epoca": {
+        "type": "string",
+        "description": "OPCIONAL. Período do ano recomendado e o que evitar. Ex: 'Março a outubro - evitar neblina de inverno (jun-ago)'.",
+        "maxLength": 200
+      },
+      "descricao_biker": {
+        "type": "string",
+        "description": "OPCIONAL. Texto livre 2-4 parágrafos com narrativa de piloto: por que vale a pena, o que esperar.",
+        "minLength": 60,
+        "maxLength": 1200
+      },
+      "fontes_dados": {
+        "type": "array",
+        "description": "OPCIONAL. URLs das fontes consultadas para preencher / validar a rota. Recomenda-se 2+.",
+        "items": { "type": "string", "format": "uri" },
+        "uniqueItems": true,
+        "maxItems": 15
+      },
+      "dicas_seguranca": {
+        "type": "array",
+        "description": "OPCIONAL. Bullets curtos de risco específico (animais na pista, neblina, assaltos, manutenção precária).",
+        "items": { "type": "string", "minLength": 10, "maxLength": 300 },
+        "maxItems": 10
+      },
+
+      "pedagios_detalhados": {
+        "type": "array",
+        "description": "OPCIONAL (F28). Detalhamento por praça da soma 'total_pedagios_moto_reais'. Use [] para deixar EXPLÍCITO que a rota foi auditada e não tem pedágio. Quando presente, a soma dos valor_moto_reais deve bater com total_pedagios_moto_reais (tolerância R$ 0,50).",
+        "maxItems": 20,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["nome", "valor_moto_reais", "sistema"],
+          "properties": {
+            "nome": {
+              "type": "string",
+              "description": "Nome da praça ou pórtico (ex: 'Praça de Jambeiro', 'Free Flow Contorno Sul').",
+              "minLength": 3,
+              "maxLength": 120
+            },
+            "km": {
+              "type": "number",
+              "description": "Km da praça na rodovia, se conhecido. Aceita decimal (ex: 13.5 para Free Flow Contorno Sul).",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "valor_moto_reais": {
+              "type": "number",
+              "description": "Tarifa vigente para categoria moto (categoria 5 ANTT / Free Flow categoria 2 eixos moto). One-way.",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "sistema": {
+              "type": "string",
+              "enum": ["fisica", "free_flow"],
+              "description": "'fisica' = cancela tradicional com cobrança no local; 'free_flow' = pórtico eletrônico sem cancela (paga em até 30-90 dias via app/site da concessionária)."
+            },
+            "concessionaria": {
+              "type": "string",
+              "description": "Empresa que opera a praça (ex: 'Concessionária Tamoios', 'EPR Via Mineira', 'CCR Rio SP', 'Novo Litoral / CNL').",
+              "minLength": 3,
+              "maxLength": 120
+            },
+            "fonte_url": {
+              "type": "string",
+              "description": "URL específica do documento/tabela de tarifas consultado (preferir página oficial da concessionária ou notícia datada do reajuste).",
+              "minLength": 8,
+              "maxLength": 400
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "latitudeBR": {
+      "type": "number",
+      "description": "Latitude válida para território brasileiro continental (cobre do Oiapoque a Chuí, com folga).",
+      "minimum": -34.0,
+      "maximum": 5.5
+    },
+    "longitudeBR": {
+      "type": "number",
+      "description": "Longitude válida para território brasileiro continental (cobre da divisa AC/PE a Trindade, sem ilhas oceânicas distantes).",
+      "minimum": -74.0,
+      "maximum": -34.0
+    },
+    "coordenadaCidade": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cidade", "latitude", "longitude"],
+      "properties": {
+        "cidade":    { "type": "string", "minLength": 2, "maxLength": 80 },
+        "latitude":  { "$ref": "#/definitions/latitudeBR" },
+        "longitude": { "$ref": "#/definitions/longitudeBR" }
+      }
+    }
+  }
+}

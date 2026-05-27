@@ -1,10 +1,12 @@
 /**
- * Mocked global fuel price used by the catalog cost estimator. The spec
- * explicitly calls out a fixed R$/L variable until a real fuel-price feed
- * exists; downstream callers should ALWAYS use this constant so the UI and
- * the matcher agree on the same baseline.
+ * Default fuel price used when the rider hasn't overridden it. Reflects the
+ * 2026-05 average for gasolina comum in São Paulo (~R$ 6,50/L). The catalog
+ * filters expose this as an editable field — downstream callers should read
+ * the price from `filters.fuelPricePerLiter` rather than this constant so the
+ * rider's local override (e.g. R$ 5,80 in the interior, R$ 7,20 near
+ * Litoral) flows through to the cost estimate.
  */
-export const DEFAULT_FUEL_PRICE_REAIS = 6.0 as const;
+export const DEFAULT_FUEL_PRICE_REAIS = 6.5 as const;
 
 export interface RouteCostBreakdown {
   liters: number;

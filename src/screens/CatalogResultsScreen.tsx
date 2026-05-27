@@ -35,7 +35,6 @@ export const CatalogResultsScreen: React.FC<Props> = ({ navigation }) => {
   const results = useCatalogStore((s) => s.results);
   const isSearching = useCatalogStore((s) => s.isSearching);
   const lastError = useCatalogStore((s) => s.lastError);
-  const setPreviewRoute = useCatalogStore((s) => s.setPreviewRoute);
   const filters = useCatalogStore((s) => s.filters);
 
   const activeMoto = useMotorcycleStore(selectActiveMotorcycle);
@@ -57,15 +56,14 @@ export const CatalogResultsScreen: React.FC<Props> = ({ navigation }) => {
     navigation.goBack();
   }, [navigation]);
 
-  const handlePreview = useCallback(
+  const handleOpenDetail = useCallback(
     (routeId: string) => {
-      setPreviewRoute(routeId);
-      // Pop back to Home rather than pushing a new instance so the rider
-      // returns to the actual idle map (with all its hydrated state) instead
-      // of stacking another HomeScreen on top.
-      navigation.popToTop();
+      // The card is now scannable-only; the detail screen owns the preview
+      // and "go to map" actions. We `push` (not `replace`) so the rider can
+      // come back to the results list with the same scroll position.
+      navigation.navigate('RouteDetail', { rotaId: routeId });
     },
-    [navigation, setPreviewRoute],
+    [navigation],
   );
 
   const renderItem = useCallback<ListRenderItem<CatalogRouteMatch>>(
@@ -74,12 +72,12 @@ export const CatalogResultsScreen: React.FC<Props> = ({ navigation }) => {
         <RouteCard
           match={item}
           safeAutonomyKm={safeAutonomyKm}
-          onPreview={handlePreview}
+          onPress={handleOpenDetail}
           testID={`route-card-${item.route.rota_id}`}
         />
       </View>
     ),
-    [handlePreview, safeAutonomyKm],
+    [handleOpenDetail, safeAutonomyKm],
   );
 
   const keyExtractor = useCallback(

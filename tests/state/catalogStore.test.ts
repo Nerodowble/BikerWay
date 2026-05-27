@@ -2,6 +2,7 @@ import type {
   CatalogFilters,
   CatalogPolylinePoint,
   CatalogRoute,
+  CatalogRouteMatch,
 } from '../../src/domains/catalog/types';
 import type { Route } from '../../src/domains/routing/types';
 
@@ -95,6 +96,8 @@ function resetStore(): void {
     previewRoute: null,
     isFetchingPreview: false,
     previewError: null,
+    refineEpoch: 0,
+    pendingRefine: null,
   });
 }
 
@@ -105,6 +108,7 @@ const defaultFilters: CatalogFilters = {
   motoSafeAutonomyKm: 200,
   pavimento: null,
   nivelCurvas: null,
+  fuelPricePerLiter: 6.0,
 };
 
 describe('catalogStore', () => {
@@ -192,16 +196,23 @@ describe('catalogStore', () => {
     it('populates approachRoute and previewRoute on success and toggles isFetchingPreview', async () => {
       const approachRoute = makeMockRoute(5000, 600);
       const mainRoute = makeMockRoute(32000, 2400);
-      // First call → approach (rider GPS → route start); second call → main
-      // (start → polyline waypoints → end). The order matters because the
-      // store fires them in that sequence inside Promise.allSettled.
-      mockGetRoute
-        .mockResolvedValueOnce(approachRoute)
-        .mockResolvedValueOnce(mainRoute);
+      // runSearch now auto-fires `refineResultsWithOsrm` in the background,
+      // which consumes 3 OSRM calls per top-N match. We give those calls a
+      // generic resolved value (its identity is irrelevant to this test),
+      // then drain the refine via `pendingRefine` before queueing the
+      // specific approach/main fixtures for `loadPreviewRoutes`.
+      mockGetRoute.mockResolvedValue(makeMockRoute(1, 1));
 
       const store = useCatalogStore.getState();
       store.setFilters(defaultFilters);
       store.runSearch();
+      // Drain the auto-fired refine so the call counter starts fresh below.
+      await useCatalogStore.getState().pendingRefine;
+      mockGetRoute.mockReset();
+      mockGetRoute
+        .mockResolvedValueOnce(approachRoute)
+        .mockResolvedValueOnce(mainRoute);
+
       store.setPreviewRoute('with-poly');
       // After setPreviewRoute we expect the fetching flag to be true and
       // the prior routes wiped so the UI shows a loading state.
@@ -294,6 +305,180 @@ describe('catalogStore', () => {
       });
       expect(mockGetRoute).not.toHaveBeenCalled();
       expect(useCatalogStore.getState().approachRoute).toBeNull();
+    });
+  });
+
+  describe('refineResultsWithOsrm', () => {
+    // Build a catalog with N entries so the top-N cap is testable. Each
+    // route's start coordinate is slightly south of São Paulo so the
+    // matcher's proximity sort is deterministic (ascending lat distance).
+    function makeBigCatalog(n: number): CatalogRoute[] {
+      const out: CatalogRoute[] = [];
+      for (let i = 0; i < n; i += 1) {
+        out.push(makeRoute(`route-${i}`, -23.51 - i * 0.01, -46.61));
+      }
+      return out;
+    }
+
+    it('writes real* metrics onto the match when all 3 OSRM legs succeed', async () => {
+      mockLoadCatalog.mockReturnValue([
+        makeRoute('rt', -23.51, -46.61),
+      ]);
+      // Three distinct distances so we can verify the round-trip is the sum
+      // of the legs (and rule out the matcher feeding haversine into them).
+      const approach = makeMockRoute(4000, 300); // 4 km
+      const main = makeMockRoute(60000, 3600); // 60 km
+      const ret = makeMockRoute(5000, 360); // 5 km
+      mockGetRoute
+        .mockResolvedValueOnce(approach)
+        .mockResolvedValueOnce(main)
+        .mockResolvedValueOnce(ret);
+
+      const store = useCatalogStore.getState();
+      store.setFilters(defaultFilters);
+      store.runSearch();
+      // runSearch fires refineResultsWithOsrm internally and exposes the
+      // resulting promise as `pendingRefine`. Awaiting it drains every
+      // microtask the refine spawned.
+      await useCatalogStore.getState().pendingRefine;
+
+      const match = useCatalogStore.getState().results[0];
+      expect(match).toBeDefined();
+      if (!match) return;
+      expect(match.hasRealMetrics).toBe(true);
+      expect(match.isRefining).toBe(false);
+      expect(match.realApproachDistanceKm).toBeCloseTo(4, 5);
+      expect(match.realRouteDistanceKm).toBeCloseTo(60, 5);
+      expect(match.realReturnDistanceKm).toBeCloseTo(5, 5);
+      expect(match.realRoundTripDistanceKm).toBeCloseTo(69, 5);
+      // Cost math: 69 km / 25 km/L * 6 R$/L + 0 toll ≈ R$16.56.
+      expect(match.realRoundTripFuelLiters).toBeCloseTo(69 / 25, 5);
+      expect(match.realRoundTripTotalCostReais).toBeCloseTo(
+        (69 / 25) * defaultFilters.fuelPricePerLiter,
+        5,
+      );
+    });
+
+    it('leaves hasRealMetrics false when any OSRM leg fails', async () => {
+      mockLoadCatalog.mockReturnValue([
+        makeRoute('rt', -23.51, -46.61),
+      ]);
+      // First two succeed, return leg rejects — the all-or-nothing rule
+      // should suppress writing partial real metrics so the card keeps
+      // showing the haversine baseline.
+      mockGetRoute
+        .mockResolvedValueOnce(makeMockRoute(4000, 300))
+        .mockResolvedValueOnce(makeMockRoute(60000, 3600))
+        .mockRejectedValueOnce(new Error('OSRM offline'));
+
+      const store = useCatalogStore.getState();
+      store.setFilters(defaultFilters);
+      store.runSearch();
+      await useCatalogStore.getState().pendingRefine;
+
+      const match = useCatalogStore.getState().results[0];
+      expect(match).toBeDefined();
+      if (!match) return;
+      expect(match.hasRealMetrics).toBe(false);
+      expect(match.isRefining).toBe(false);
+      expect(match.realRoundTripDistanceKm).toBeUndefined();
+      expect(match.realRoundTripTotalCostReais).toBeUndefined();
+    });
+
+    it('caps refinement at the top 5 matches even when more are present', async () => {
+      mockLoadCatalog.mockReturnValue(makeBigCatalog(10));
+      // Every OSRM call succeeds. We just need to count invocations: 5
+      // matches * 3 legs = 15 OSRM calls, no more.
+      mockGetRoute.mockResolvedValue(makeMockRoute(1000, 60));
+
+      const store = useCatalogStore.getState();
+      store.setFilters(defaultFilters);
+      store.runSearch();
+      await useCatalogStore.getState().pendingRefine;
+
+      expect(mockGetRoute).toHaveBeenCalledTimes(15);
+      const results = useCatalogStore.getState().results;
+      // Top 5 refined, tail untouched.
+      for (let i = 0; i < 5; i += 1) {
+        expect(results[i]?.hasRealMetrics).toBe(true);
+      }
+      for (let i = 5; i < results.length; i += 1) {
+        expect(results[i]?.hasRealMetrics).toBeUndefined();
+        expect(results[i]?.isRefining).toBeUndefined();
+      }
+    });
+
+    it('cancels stale refine writes via the epoch counter when runSearch fires again', async () => {
+      mockLoadCatalog.mockReturnValue([
+        makeRoute('rt', -23.51, -46.61),
+      ]);
+      // Stage 1: hold the OSRM responses behind a manual gate so the
+      // auto-fired refine awaits forever — this gives us a window to
+      // bump the epoch via clearResults before the writes are attempted.
+      let releasePending: ((route: Route) => void) | null = null;
+      const pendingResponse = new Promise<Route>((resolve) => {
+        releasePending = resolve;
+      });
+      mockGetRoute.mockImplementation(() => pendingResponse);
+
+      const store = useCatalogStore.getState();
+      store.setFilters(defaultFilters);
+      store.runSearch();
+      const stalePromise = useCatalogStore.getState().pendingRefine;
+      const epochBefore = useCatalogStore.getState().refineEpoch;
+
+      // Stage 2: bump the epoch via clearResults so the stale refine sees
+      // a moved-on store when it eventually wakes up. clearResults is a
+      // safer bump than a second runSearch because it does not fire a new
+      // refine task whose OSRM calls would also block on the same gate.
+      store.clearResults();
+      expect(useCatalogStore.getState().refineEpoch).toBe(epochBefore + 1);
+
+      // Stage 3: re-populate the results with a fresh match (no real*
+      // flags). Any stale write that ignored the epoch check would land
+      // here because the id matches — that is the regression we are
+      // guarding against.
+      const freshMatch: CatalogRouteMatch = {
+        route: makeRoute('rt', -23.51, -46.61),
+        distanceToStartKm: 0,
+        estimatedFuelLiters: 0,
+        estimatedFuelCostReais: 0,
+        estimatedTotalCostReais: 0,
+        approachDistanceKm: 0,
+        returnDistanceKm: 0,
+        roundTripDistanceKm: 50,
+        roundTripFuelLiters: 0,
+        roundTripFuelCostReais: 0,
+        roundTripTotalCostReais: 0,
+        fuelPricePerLiter: 6,
+        autonomyWarning: false,
+        overBudget: false,
+      };
+      useCatalogStore.setState({ results: [freshMatch] });
+
+      // Stage 4: release the OSRM gate. The stale refine wakes up, sees
+      // the bumped epoch, and exits silently without touching the
+      // freshly-injected match.
+      if (releasePending) {
+        (releasePending as (route: Route) => void)(makeMockRoute(1000, 60));
+      }
+      await stalePromise;
+
+      const matchAfter = useCatalogStore.getState().results[0];
+      expect(matchAfter).toBeDefined();
+      if (!matchAfter) return;
+      expect(matchAfter.hasRealMetrics).toBeUndefined();
+      expect(matchAfter.realRoundTripDistanceKm).toBeUndefined();
+      // isRefining was set to true by the stale task's initial sync set
+      // (before clearResults landed), but clearResults wiped that match
+      // entirely. The freshly-injected match never had the flag set.
+      expect(matchAfter.isRefining).toBeUndefined();
+    });
+
+    it('refineResultsWithOsrm is a no-op when filters are null', async () => {
+      // No setFilters call → refine must bail without touching mockGetRoute.
+      await useCatalogStore.getState().refineResultsWithOsrm();
+      expect(mockGetRoute).not.toHaveBeenCalled();
     });
   });
 });
