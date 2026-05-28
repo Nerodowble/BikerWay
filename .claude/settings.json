@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth *)",
+      "PowerShell(gh auth status 2>&1)",
+      "PowerShell($paths = @\\(\"$env:ProgramFiles\\\\GitHub CLI\\\\gh.exe\",\"$env:LOCALAPPDATA\\\\Programs\\\\GitHub CLI\\\\gh.exe\",\"$env:USERPROFILE\\\\AppData\\\\Local\\\\Programs\\\\GitHub CLI\\\\gh.exe\",\"$env:ProgramFiles\\\\Git\\\\mingw64\\\\bin\\\\gh.exe\"\\); foreach \\($p in $paths\\) { if \\(Test-Path $p\\) { Write-Output \"FOUND: $p\" } }; Write-Output \"---\"; Get-ChildItem -Path \"$env:ProgramFiles\",\"$env:LOCALAPPDATA\\\\Programs\" -Filter \"gh.exe\" -Recurse -ErrorAction SilentlyContinue 2>$null | Select-Object -First 5 FullName)",
+      "PowerShell(winget --version)",
+      "PowerShell(winget install --id GitHub.cli --silent --accept-source-agreements --accept-package-agreements 2>&1)",
+      "PowerShell($gh = \"$env:ProgramFiles\\\\GitHub CLI\\\\gh.exe\"; if \\(Test-Path $gh\\) { & $gh --version | Select-Object -First 1 } else { Get-ChildItem -Path \"$env:ProgramFiles\" -Filter \"gh.exe\" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 FullName })",
+      "PowerShell(& \"$env:ProgramFiles\\\\GitHub CLI\\\\gh.exe\" auth status 2>&1 | Select-Object -First 10)",
+      "Bash(ssh -T -o StrictHostKeyChecking=accept-new -o BatchMode=yes git@github.com)"
+    ]
+  }
+}

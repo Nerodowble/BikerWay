@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -56,6 +56,9 @@ import { useAcceptedSOSStore } from '@/state/acceptedSOSStore';
 import { useLocationStore } from '@/state/locationStore';
 import { usePoiStore } from '@/state/poiStore';
 import { useVoiceGroupStore } from '@/state/voiceGroupStore';
+import { useComboioPingStore } from '@/state/comboioPingStore';
+import { initialForParticipant } from '@/domains/voice/participantColor';
+import { getVoiceController } from '@/shared/components/voice';
 import { useRiderStore } from '@/state/riderStore';
 import {
   buildFullCatalogRoute,
@@ -293,6 +296,17 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   // afeta o broadcast (os outros continuam me vendo) — so suprime a
   // renderizacao dos PeerMemberMarker neste device.
   const peerPinsHidden = useVoiceGroupStore((s) => s.peerPinsHidden);
+  // F34.2 — Sucessor escolhido pelo admin local. Vai pra estrela ⭐ acima
+  // do pin do peer correspondente no mapa.
+  const comboioSuccessorPeerId = useVoiceGroupStore(
+    (s) => s.successorPeerId,
+  );
+  // F34.5 — Pings ativos no mapa + actions pra criar/limpar.
+  const comboioPings = useComboioPingStore((s) => s.pings);
+  const setPing = useComboioPingStore((s) => s.setPing);
+  const prunePings = useComboioPingStore((s) => s.prune);
+  const comboioToken = useVoiceGroupStore((s) => s.token);
+  const comboioDisplayName = useVoiceGroupStore((s) => s.displayName);
   const purgeStalePeerPositions = useVoiceGroupStore(
     (s) => s.purgeStalePeerPositions,
   );
@@ -805,6 +819,52 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     mapHandleRef.current?.centerOnUser();
   };
 
+  const handleFitPeerGroup = (): void => {
+    mapHandleRef.current?.fitToPeerGroup();
+  };
+
+  // F34.5 — Tick a cada 10s pra remover pings que passaram do TTL (45s).
+  // Sem isso, pings expirados ficariam no mapa ate o proximo set/clear.
+  useEffect(() => {
+    if (comboioPings.length === 0) return;
+    const handle = setInterval(() => {
+      prunePings();
+    }, 10_000);
+    return () => clearInterval(handle);
+  }, [comboioPings.length, prunePings]);
+
+  // F34.5 — Long-press no mapa cria um ping pulsante naquela coordenada.
+  // F34.5.1 — Tambem propaga via PeerJS pros peers do comboio receberem
+  // e renderizarem.
+  const handleLongPressMap = useCallback(
+    (coord: { latitude: number; longitude: number }) => {
+      // So permite ping quando estiver num comboio ativo (faz sentido —
+      // sinalizar pra ninguem nao serve). `token` populated = comboio ativo.
+      if (comboioToken === null) return;
+      const initial = initialForParticipant(comboioDisplayName);
+      setPing({
+        peerId: 'self',
+        initial,
+        latitude: coord.latitude,
+        longitude: coord.longitude,
+        createdAt: Date.now(),
+      });
+      // F34.5.1 — Broadcast pra peers. Best-effort: falha de transport
+      // nao reverte o ping local.
+      try {
+        const ctrl = getVoiceController();
+        ctrl?.sendPing({
+          latitude: coord.latitude,
+          longitude: coord.longitude,
+          initial,
+        });
+      } catch {
+        // best-effort
+      }
+    },
+    [comboioToken, comboioDisplayName, setPing],
+  );
+
   const handleOpenComboio = (): void => {
     navigation.navigate('Comboio');
   };
@@ -982,6 +1042,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           onPoiPress={(poi) => selectPoi(poi.id)}
           fuelWaypoint={pendingFuelWaypoint}
           peerMembers={peerMembersArray}
+          successorPeerId={comboioSuccessorPeerId}
+          pings={comboioPings}
+          onLongPressMap={handleLongPressMap}
           routeAlternatives={mapAlternatives}
           weatherSegments={weatherRouteSegments ?? undefined}
           previewPolyline={previewPolyline}
@@ -1170,6 +1233,27 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           testID="btn-recenter"
         >
           <CrosshairIcon size={26} color={colors.accent} />
+        </Pressable>
+      ) : null}
+
+      {/* F34.8 — Botao "🔍 PELOTÃO": auto-zoom no grupo. Aparece quando
+          ha pelo menos 1 peer no comboio + minha posicao GPS. Posicionado
+          A ESQUERDA do recenter (mesma altura) pra nao colidir com a
+          coluna de FABs (recenter / comboio / menu). */}
+      {peerMembersArray.length >= 1 && userPos ? (
+        <Pressable
+          style={({ pressed }) => [
+            styles.pelotaoFab,
+            { bottom: recenterBottom, right: fabsRight + 70 },
+            pressed ? styles.recenterFabPressed : null,
+          ]}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: true }}
+          onPress={handleFitPeerGroup}
+          accessibilityRole="button"
+          accessibilityLabel="Ver o pelotão inteiro no mapa"
+          testID="btn-pelotao"
+        >
+          <Text style={styles.pelotaoIcon}>🔍</Text>
         </Pressable>
       ) : null}
 
@@ -1640,6 +1724,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+  },
+  pelotaoFab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.fab,
+  },
+  pelotaoIcon: {
+    fontSize: 24,
   },
   recenterFab: {
     position: 'absolute',

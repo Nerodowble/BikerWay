@@ -43,6 +43,35 @@ export interface JitsiWebViewProps {
    * the BikerWay map can render a coloured pin per peer.
    */
   onPeerPosition?: (p: ComboioPeerPosition) => void;
+  /**
+   * F34.5.1 — Ping de localizacao recebido de outro peer. RN encaminha
+   * pro comboioPingStore que renderiza marker pulsante 45s.
+   */
+  onPeerPing?: (p: {
+    peerId: string;
+    initial: string;
+    latitude: number;
+    longitude: number;
+    createdAt: number;
+  }) => void;
+  /**
+   * F34.2.1 — Admin remoto designou um sucessor. RN atualiza store local
+   * pra mostrar a ⭐ no peer indicado.
+   */
+  onAdminDesignate?: (p: {
+    from: string;
+    successorPeerId: string;
+    timestamp: number;
+  }) => void;
+  /**
+   * F34.2.1 — Admin transferiu admin pra outro peer (ou avisou que vai
+   * sair). RN decide se o LOCAL vira admin (quando to=my id).
+   */
+  onAdminHandoff?: (p: {
+    from: string;
+    to: string;
+    timestamp: number;
+  }) => void;
 }
 
 export interface JitsiDiagnosticState {
@@ -77,6 +106,16 @@ export interface JitsiWebViewHandle {
     heading?: number | null;
     speed?: number | null;
   }) => void;
+  /** F34.5.1 — Envia ping de localizacao pros peers no comboio. */
+  sendPing: (input: {
+    latitude: number;
+    longitude: number;
+    initial: string;
+  }) => void;
+  /** F34.2.1 — Propaga sucessor escolhido. */
+  sendAdminDesignate: (successorId: string) => void;
+  /** F34.2.1 — Transfere admin pra outro peer. */
+  sendAdminHandoff: (toId: string) => void;
 }
 
 type BridgeMessage =
@@ -106,6 +145,32 @@ type BridgeMessage =
         longitude?: number;
         heading?: number | null;
         speed?: number | null;
+        timestamp?: number;
+      } | null;
+    }
+  | {
+      type: 'peerPing';
+      payload: {
+        peerId?: string;
+        initial?: string;
+        latitude?: number;
+        longitude?: number;
+        createdAt?: number;
+      } | null;
+    }
+  | {
+      type: 'adminDesignate';
+      payload: {
+        from?: string;
+        successorPeerId?: string;
+        timestamp?: number;
+      } | null;
+    }
+  | {
+      type: 'adminHandoff';
+      payload: {
+        from?: string;
+        to?: string;
         timestamp?: number;
       } | null;
     };
@@ -143,6 +208,9 @@ export const JitsiWebView = forwardRef<JitsiWebViewHandle, JitsiWebViewProps>(fu
     onError,
     onDiagnostic,
     onPeerPosition,
+    onPeerPing,
+    onAdminDesignate,
+    onAdminHandoff,
   } = props;
 
   const webRef = useRef<WebView | null>(null);
@@ -174,6 +242,29 @@ export const JitsiWebView = forwardRef<JitsiWebViewHandle, JitsiWebViewProps>(fu
             longitude: input.longitude,
             heading: input.heading ?? null,
             speed: input.speed ?? null,
+          }),
+        ),
+      sendPing: (input) =>
+        inject(
+          buildJitsiInjectionScript({
+            kind: 'sendPing',
+            latitude: input.latitude,
+            longitude: input.longitude,
+            initial: input.initial,
+          }),
+        ),
+      sendAdminDesignate: (successorId) =>
+        inject(
+          buildJitsiInjectionScript({
+            kind: 'sendAdminDesignate',
+            successorId,
+          }),
+        ),
+      sendAdminHandoff: (toId) =>
+        inject(
+          buildJitsiInjectionScript({
+            kind: 'sendAdminHandoff',
+            toId,
           }),
         ),
     }),
@@ -274,6 +365,66 @@ export const JitsiWebView = forwardRef<JitsiWebViewHandle, JitsiWebViewProps>(fu
             });
           }
           return;
+        case 'peerPing':
+          if (
+            msg.payload &&
+            typeof msg.payload.peerId === 'string' &&
+            msg.payload.peerId.length > 0 &&
+            typeof msg.payload.latitude === 'number' &&
+            typeof msg.payload.longitude === 'number' &&
+            Number.isFinite(msg.payload.latitude) &&
+            Number.isFinite(msg.payload.longitude)
+          ) {
+            onPeerPing?.({
+              peerId: msg.payload.peerId,
+              initial:
+                typeof msg.payload.initial === 'string' &&
+                msg.payload.initial.length > 0
+                  ? msg.payload.initial.charAt(0).toUpperCase()
+                  : '?',
+              latitude: msg.payload.latitude,
+              longitude: msg.payload.longitude,
+              createdAt:
+                typeof msg.payload.createdAt === 'number'
+                  ? msg.payload.createdAt
+                  : Date.now(),
+            });
+          }
+          return;
+        case 'adminDesignate':
+          if (
+            msg.payload &&
+            typeof msg.payload.from === 'string' &&
+            msg.payload.from.length > 0 &&
+            typeof msg.payload.successorPeerId === 'string'
+          ) {
+            onAdminDesignate?.({
+              from: msg.payload.from,
+              successorPeerId: msg.payload.successorPeerId,
+              timestamp:
+                typeof msg.payload.timestamp === 'number'
+                  ? msg.payload.timestamp
+                  : Date.now(),
+            });
+          }
+          return;
+        case 'adminHandoff':
+          if (
+            msg.payload &&
+            typeof msg.payload.from === 'string' &&
+            msg.payload.from.length > 0 &&
+            typeof msg.payload.to === 'string'
+          ) {
+            onAdminHandoff?.({
+              from: msg.payload.from,
+              to: msg.payload.to,
+              timestamp:
+                typeof msg.payload.timestamp === 'number'
+                  ? msg.payload.timestamp
+                  : Date.now(),
+            });
+          }
+          return;
         default:
           return;
       }
@@ -291,6 +442,9 @@ export const JitsiWebView = forwardRef<JitsiWebViewHandle, JitsiWebViewProps>(fu
       onError,
       onDiagnostic,
       onPeerPosition,
+      onPeerPing,
+      onAdminDesignate,
+      onAdminHandoff,
     ],
   );
 

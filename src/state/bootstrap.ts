@@ -2,6 +2,7 @@ import { initDatabase } from '../infrastructure/db/sqlite';
 import { getRideHistoryRepo } from '../infrastructure/db/rideHistoryRepository';
 import { getOsrmCacheRepo } from '../infrastructure/db/osrmCacheRepository';
 import { getPoiCacheRepo } from '../infrastructure/db/poiCacheRepository';
+import { useComboioPreferencesStore } from './comboioPreferencesStore';
 import { useMotorcycleStore } from './motorcycleStore';
 import { useNavigationStore } from './navigationStore';
 import { useRiderStore } from './riderStore';
@@ -68,6 +69,11 @@ export async function bootstrapApp(): Promise<BootstrapResult> {
   } catch {
     // best-effort
   }
+
+  // F34.0 — Hidrata preferencias do comboio (6 toggles) ANTES de qualquer
+  // tela montar. Default seguro embutido no store, entao falha aqui nao
+  // bloqueia o app.
+  await useComboioPreferencesStore.getState().hydrate();
 
   if (initError) {
     return { success: false, error: initError.message };

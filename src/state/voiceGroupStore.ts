@@ -61,6 +61,20 @@ export interface VoiceGroupStoreState {
    * Reseta em `leaveComboio`.
    */
   incomingAudioMuted: boolean;
+  /**
+   * F34.2 — Marca que o usuario LOCAL e o criador desse comboio (admin).
+   * Define quem ve as opcoes de "definir sucessor" + ganha coroa visual.
+   * Em V1, e local-only (nao propaga via wire). Reset em `leaveComboio`.
+   *
+   * Limitacao consciente: outros peers veem o admin local como peer
+   * comum ate F34.2.1 implementar `admin.designate`/`admin.handoff` wire.
+   */
+  isLocalAdmin: boolean;
+  /**
+   * F34.2 — Peer id escolhido pelo admin como SUCESSOR (recebe coroa
+   * quando o admin atual sair, antes da cascata FIFO). Local-only em V1.
+   */
+  successorPeerId: string | null;
 
   // Lifecycle — the JitsiWebView is mounted in the screen tree and feeds
   // events back into these reducers via the screen. The store deliberately
@@ -80,6 +94,8 @@ export interface VoiceGroupStoreState {
   clearPeerPositions: () => void;
   setPeerPinsHidden: (hidden: boolean) => void;
   setIncomingAudioMuted: (muted: boolean) => void;
+  /** F34.2 — Define peer id sucessor. null = cancela escolha. */
+  setSuccessorPeerId: (id: string | null) => void;
 
   /**
    * Mark the session as silently reconnecting after a transient network drop.
@@ -115,6 +131,8 @@ interface InitialResetShape {
   peerPositions: Record<string, ComboioPeerPosition>;
   peerPinsHidden: boolean;
   incomingAudioMuted: boolean;
+  isLocalAdmin: boolean;
+  successorPeerId: string | null;
 }
 
 const RESET_FIELDS: InitialResetShape = {
@@ -128,6 +146,8 @@ const RESET_FIELDS: InitialResetShape = {
   peerPositions: {},
   peerPinsHidden: false,
   incomingAudioMuted: false,
+  isLocalAdmin: false,
+  successorPeerId: null,
 };
 
 export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
@@ -142,6 +162,8 @@ export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
   peerPositions: {},
   peerPinsHidden: false,
   incomingAudioMuted: false,
+  isLocalAdmin: false,
+  successorPeerId: null,
 
   createComboio: (displayName) => {
     const token = buildComboioToken();
@@ -156,6 +178,9 @@ export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
       peerPositions: {},
       peerPinsHidden: false,
       incomingAudioMuted: false,
+      // F34.2 — Quem CRIA o comboio e o admin local.
+      isLocalAdmin: true,
+      successorPeerId: null,
     });
     return token;
   },
@@ -177,6 +202,9 @@ export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
       peerPositions: {},
       peerPinsHidden: false,
       incomingAudioMuted: false,
+      // F34.2 — Quem ENTRA em comboio existente NAO e admin.
+      isLocalAdmin: false,
+      successorPeerId: null,
     });
     return token;
   },
@@ -193,6 +221,13 @@ export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
   setAudioOutput: (o) => set({ audioOutput: o }),
   setPeerPinsHidden: (hidden) => set({ peerPinsHidden: hidden }),
   setIncomingAudioMuted: (muted) => set({ incomingAudioMuted: muted }),
+  setSuccessorPeerId: (id) => {
+    // Idempotente: toggle off se for o mesmo id ja escolhido. Mantem o
+    // setter robusto pra UI que liga/desliga sem precisar saber o estado.
+    const current = get().successorPeerId;
+    if (current === id) return;
+    set({ successorPeerId: id });
+  },
 
   upsertParticipant: (p) => {
     const list = get().participants;
@@ -227,10 +262,15 @@ export const useVoiceGroupStore = create<VoiceGroupStoreState>((set, get) => ({
       delete copy[id];
       nextPositions = copy;
     }
+    // F34.2 — Se o sucessor sair do comboio, limpa a escolha pro admin
+    // ter que escolher de novo.
+    const successor = get().successorPeerId;
+    const nextSuccessor = successor === id ? null : successor;
     set({
       participants: next,
       dominantSpeakerId: dominant,
       peerPositions: nextPositions,
+      successorPeerId: nextSuccessor,
     });
   },
 

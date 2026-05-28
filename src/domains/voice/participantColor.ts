@@ -15,15 +15,27 @@
  * (`#FF6B00`) keeps its semantic meaning ("the BikerWay app brand").
  */
 
+// F34.1 — Paleta expandida pra 15 cores (do brainstorm) distantes em HSL.
+// Hand-picked pra: alto contraste em dark theme (#121212), nao-adjacentes
+// em hue, sem invadir a faixa do brand laranja (#FF6B00 ~= hue 22deg).
+// Quando o comboio chega ao max de 15 peers (limite por F34), cada um
+// ainda tem cor unica via mod hash.
 export const PARTICIPANT_PALETTE: readonly string[] = [
-  '#4FC3F7', // sky blue
-  '#81C784', // light green
-  '#BA68C8', // purple
-  '#FFD54F', // amber
-  '#F06292', // pink
-  '#4DB6AC', // teal
-  '#A1887F', // mocha
-  '#E57373', // soft red
+  '#4FC3F7', //   1 — sky blue (200deg)
+  '#81C784', //   2 — light green (120deg)
+  '#BA68C8', //   3 — purple (288deg)
+  '#FFD54F', //   4 — amber (47deg)
+  '#F06292', //   5 — pink (340deg)
+  '#4DB6AC', //   6 — teal (174deg)
+  '#A1887F', //   7 — mocha (16deg, lightness baixa pra nao bater no laranja)
+  '#E57373', //   8 — soft red (0deg)
+  '#7986CB', //   9 — indigo (231deg)
+  '#AED581', //  10 — lime (89deg)
+  '#FF8A65', //  11 — coral (14deg — distinto do brand pela saturation)
+  '#9575CD', //  12 — lavender (260deg)
+  '#64B5F6', //  13 — light blue (210deg)
+  '#DCE775', //  14 — olive (66deg)
+  '#4DD0E1', //  15 — cyan (187deg)
 ] as const;
 
 /**
@@ -46,4 +58,18 @@ export function colorForParticipant(peerId: string): string {
   // PARTICIPANT_PALETTE is readonly + non-empty + idx is in range, so the
   // fallback is just for noUncheckedIndexedAccess.
   return PARTICIPANT_PALETTE[idx] ?? '#888888';
+}
+
+/**
+ * F34.1 — Inicial maiuscula do nome do peer pra usar no badge da label.
+ * Defensiva contra `null`/`undefined`/string vazia → cai pra '?'. Suporta
+ * sobrenome composto pegando so a primeira letra do primeiro nome valido.
+ */
+export function initialForParticipant(displayName?: string | null): string {
+  if (!displayName) return '?';
+  const trimmed = displayName.trim();
+  if (trimmed.length === 0) return '?';
+  // Pega primeiro caractere imprimivel (letra ASCII OU acento)
+  const firstChar = trimmed.charAt(0).toUpperCase();
+  return firstChar.length === 0 ? '?' : firstChar;
 }

@@ -499,6 +499,48 @@ export function buildJitsiHtml(input: BuildJitsiHtmlInput): string {
     return true;
   };
 
+  // F34.5.1 — Ping de localizacao P2P. Mesmo padrao do bwSendPosition.
+  // Payload curto: tipo + autor + coord + inicial + timestamp.
+  window.bwSendPing = function (lat, lng, initial) {
+    if (!peer || peer.disconnected || peer.destroyed) return false;
+    var pkt = { type: 'ping', id: myId, name: DISPLAY_NAME, lat: lat, lng: lng, ini: initial, ts: Date.now() };
+    Object.keys(remotes).forEach(function (pid) {
+      var entry = remotes[pid];
+      if (entry && entry.conn && entry.conn.open) {
+        try { entry.conn.send(pkt); } catch (e) { /* swallow */ }
+      }
+    });
+    return true;
+  };
+
+  // F34.2.1 — Admin designa sucessor. Broadcasta o ID do escolhido pra
+  // todos. Cada peer atualiza local store pra ver o ⭐.
+  window.bwSendAdminDesignate = function (successorId) {
+    if (!peer || peer.disconnected || peer.destroyed) return false;
+    var pkt = { type: 'adm-desig', from: myId, suc: successorId, ts: Date.now() };
+    Object.keys(remotes).forEach(function (pid) {
+      var entry = remotes[pid];
+      if (entry && entry.conn && entry.conn.open) {
+        try { entry.conn.send(pkt); } catch (e) { /* swallow */ }
+      }
+    });
+    return true;
+  };
+
+  // F34.2.1 — Admin transfere o admin pra outro peer (ou anuncia que esta
+  // saindo). Cada peer recebe e decide se vira admin (se to=meu id).
+  window.bwSendAdminHandoff = function (toId) {
+    if (!peer || peer.disconnected || peer.destroyed) return false;
+    var pkt = { type: 'adm-hand', from: myId, to: toId, ts: Date.now() };
+    Object.keys(remotes).forEach(function (pid) {
+      var entry = remotes[pid];
+      if (entry && entry.conn && entry.conn.open) {
+        try { entry.conn.send(pkt); } catch (e) { /* swallow */ }
+      }
+    });
+    return true;
+  };
+
   // Forwards a "pos" packet to React Native via the bridge. Shared by both
   // the host inbound conn handler and the guest outbound-then-callback
   // conn handler so neither path silently drops position updates.
@@ -510,6 +552,37 @@ export function buildJitsiHtml(input: BuildJitsiHtmlInput): string {
       longitude: Number(data.lng),
       heading: typeof data.hd === 'number' ? data.hd : null,
       speed: typeof data.sp === 'number' ? data.sp : null,
+      timestamp: typeof data.ts === 'number' ? data.ts : Date.now(),
+    });
+  }
+
+  // F34.5.1 — Forward de ping recebido pra RN. Estrutura compativel com
+  // domains/comboio/ping.ts (peerId / initial / latitude / longitude /
+  // createdAt). O receiver atualiza o comboioPingStore.
+  function emitPeerPing(data, conn) {
+    post('peerPing', {
+      peerId: String((data && data.id) || (conn && conn.peer) || ''),
+      initial: typeof data.ini === 'string' && data.ini.length > 0 ? data.ini : '?',
+      latitude: Number(data.lat),
+      longitude: Number(data.lng),
+      createdAt: typeof data.ts === 'number' ? data.ts : Date.now(),
+    });
+  }
+
+  // F34.2.1 — Forward de designacao de sucessor.
+  function emitAdminDesignate(data, conn) {
+    post('adminDesignate', {
+      from: String((data && data.from) || (conn && conn.peer) || ''),
+      successorPeerId: String((data && data.suc) || ''),
+      timestamp: typeof data.ts === 'number' ? data.ts : Date.now(),
+    });
+  }
+
+  // F34.2.1 — Forward de handoff de admin.
+  function emitAdminHandoff(data, conn) {
+    post('adminHandoff', {
+      from: String((data && data.from) || (conn && conn.peer) || ''),
+      to: String((data && data.to) || ''),
       timestamp: typeof data.ts === 'number' ? data.ts : Date.now(),
     });
   }
@@ -550,6 +623,12 @@ export function buildJitsiHtml(input: BuildJitsiHtmlInput): string {
             registerRemote(String(data.id || conn.peer || ''), String(data.name || ''));
           } else if (data.type === 'pos') {
             emitPeerPosition(data, conn);
+          } else if (data.type === 'ping') {
+            emitPeerPing(data, conn);
+          } else if (data.type === 'adm-desig') {
+            emitAdminDesignate(data, conn);
+          } else if (data.type === 'adm-hand') {
+            emitAdminHandoff(data, conn);
           }
         } catch (e) { /* swallow */ }
       });
@@ -647,6 +726,12 @@ export function buildJitsiHtml(input: BuildJitsiHtmlInput): string {
         registerRemote(String(data.id || HOST_ID), String(data.name || ''));
       } else if (data.type === 'pos') {
         emitPeerPosition(data, conn);
+      } else if (data.type === 'ping') {
+        emitPeerPing(data, conn);
+      } else if (data.type === 'adm-desig') {
+        emitAdminDesignate(data, conn);
+      } else if (data.type === 'adm-hand') {
+        emitAdminHandoff(data, conn);
       } else if (data.type === 'peer-list' && Array.isArray(data.peers)) {
         data.peers.forEach(function (entry) {
           var pid;

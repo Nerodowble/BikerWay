@@ -16,6 +16,8 @@ import {
   selectActiveMotorcycle,
 } from '@/state/motorcycleStore';
 import { useRiderStore, selectRiderCityState } from '@/state/riderStore';
+import { useComboioPreferencesStore } from '@/state/comboioPreferencesStore';
+import type { ComboioPreferences } from '@/domains/comboio/preferences';
 import { avatarInitial } from '@/domains/rider/avatar';
 import { useMovementLock } from '@/shared/hooks/useMovementLock';
 import type { RootStackParamList } from '@/navigation/types';
@@ -218,6 +220,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
+      <ComboioPreferencesSection />
+
       <View style={styles.section} testID="settings-section-passport">
         <Text style={styles.sectionEyebrow}>MEU PASSAPORTE</Text>
         <Text style={styles.statusLine}>
@@ -264,6 +268,109 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         </Text>
       </View>
     </Screen>
+  );
+};
+
+/**
+ * F34.0 — Seção de preferências do comboio. 6 toggles persistidos via
+ * `useComboioPreferencesStore`. Defaults: replay/km-h OFF; parados,
+ * separação, rota oficial, cross-path ON.
+ */
+const ComboioPreferencesSection: React.FC = () => {
+  const preferences = useComboioPreferencesStore((s) => s.preferences);
+  const toggle = useComboioPreferencesStore((s) => s.toggle);
+
+  const items: Array<{
+    key: keyof ComboioPreferences;
+    icon: string;
+    title: string;
+    description: string;
+  }> = [
+    {
+      key: 'recordReplay',
+      icon: '🎥',
+      title: 'Gravar minhas viagens',
+      description:
+        'Guarda o caminho que você fez pra você poder ver de novo depois. Fica só no seu celular.',
+    },
+    {
+      key: 'showSpeedOnPin',
+      icon: '⚡',
+      title: 'Mostrar a velocidade do pessoal',
+      description:
+        'A velocidade de cada um do grupo aparece embaixo do nome no mapa.',
+    },
+    {
+      key: 'highlightStopped',
+      icon: '⏸️',
+      title: 'Avisar quem está parado',
+      description:
+        'Destaca no mapa quem está parado faz mais de meio minuto.',
+    },
+    {
+      key: 'alertSeparation',
+      icon: '⚠️',
+      title: 'Avisar quando alguém se afastar',
+      description:
+        'Mostra um aviso se alguém do grupo ficar mais de 3 km longe por uns 3 minutos.',
+    },
+    {
+      key: 'showOfficialRoute',
+      icon: '🛣️',
+      title: 'Mostrar o caminho do líder do grupo',
+      description:
+        'Quem cria o comboio pode compartilhar o caminho oficial. Aparece como uma linha azul tracejada no mapa.',
+    },
+    {
+      key: 'crossPathBanner',
+      icon: '🔀',
+      title: 'Avisar quando eu encontrar o grupo',
+      description:
+        'Quando você passa pelo caminho do grupo, aparece um aviso perguntando se você quer seguir junto.',
+    },
+  ];
+
+  return (
+    <View style={styles.section} testID="settings-section-comboio-prefs">
+      <Text style={styles.sectionEyebrow}>AJUSTES DO COMBOIO</Text>
+      <Text style={styles.statusLine}>
+        Liga uma vez e vale pra todo comboio que você entrar. Cada
+        opção funciona separada.
+      </Text>
+      {items.map((item) => (
+        <Pressable
+          key={item.key}
+          onPress={() => toggle(item.key)}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: preferences[item.key] }}
+          accessibilityLabel={item.title}
+          testID={`toggle-comboio-${item.key}`}
+          style={({ pressed }) => [
+            styles.toggleRow,
+            pressed ? styles.toggleRowPressed : null,
+          ]}
+        >
+          <Text style={styles.toggleIcon}>{item.icon}</Text>
+          <View style={styles.toggleBody}>
+            <Text style={styles.toggleTitle}>{item.title}</Text>
+            <Text style={styles.toggleDescription}>{item.description}</Text>
+          </View>
+          <View
+            style={[
+              styles.toggleSwitch,
+              preferences[item.key] ? styles.toggleSwitchOn : null,
+            ]}
+          >
+            <View
+              style={[
+                styles.toggleThumb,
+                preferences[item.key] ? styles.toggleThumbOn : null,
+              ]}
+            />
+          </View>
+        </Pressable>
+      ))}
+    </View>
   );
 };
 
@@ -338,6 +445,58 @@ const styles = StyleSheet.create({
     fontWeight: typography.navSecondary.fontWeight,
     lineHeight: typography.navSecondary.lineHeight,
     marginBottom: spacing.md,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    marginBottom: spacing.sm,
+  },
+  toggleRowPressed: {
+    opacity: 0.7,
+  },
+  toggleIcon: {
+    fontSize: 24,
+  },
+  toggleBody: {
+    flex: 1,
+  },
+  toggleTitle: {
+    color: colors.textPrimary,
+    fontSize: typography.navSecondary.fontSize,
+    fontWeight: '700',
+  },
+  toggleDescription: {
+    color: colors.textSecondary,
+    fontSize: typography.caption.fontSize,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  toggleSwitch: {
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.borderSubtle,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleSwitchOn: {
+    backgroundColor: colors.accent,
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+  },
+  toggleThumbOn: {
+    alignSelf: 'flex-end',
   },
   riderRow: {
     flexDirection: 'row',

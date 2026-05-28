@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { JitsiWebView, type JitsiWebViewHandle } from './JitsiWebView';
 import { useVoiceGroupStore } from '@/state/voiceGroupStore';
+import { useComboioPingStore } from '@/state/comboioPingStore';
 import { useNavigationStore } from '@/state/navigationStore';
 
 // Module-level handle so any screen can drive mute/hangup without holding a
@@ -18,6 +19,16 @@ export interface VoiceController {
    */
   setIncomingAudioMuted: (muted: boolean) => void;
   hangup: () => void;
+  /** F34.5.1 — Envia ping de localizacao pros peers. */
+  sendPing: (input: {
+    latitude: number;
+    longitude: number;
+    initial: string;
+  }) => void;
+  /** F34.2.1 — Propaga sucessor escolhido pra todos. */
+  sendAdminDesignate: (successorId: string) => void;
+  /** F34.2.1 — Transfere admin pra outro peer. */
+  sendAdminHandoff: (toId: string) => void;
 }
 
 /**
@@ -34,6 +45,9 @@ export function getVoiceController(): VoiceController | null {
     setAudioMuted: (muted: boolean) => handle.setAudioMuted(muted),
     setIncomingAudioMuted: (muted: boolean) => handle.setIncomingAudioMuted(muted),
     hangup: () => handle.hangup(),
+    sendPing: (input) => handle.sendPing(input),
+    sendAdminDesignate: (successorId) => handle.sendAdminDesignate(successorId),
+    sendAdminHandoff: (toId) => handle.sendAdminHandoff(toId),
   };
 }
 
@@ -162,6 +176,53 @@ export const VoiceSessionMount: React.FC = () => {
     [],
   );
 
+  // F34.5.1 — Ping recebido de outro peer: empilha no comboioPingStore.
+  // O store dedupa por peerId automaticamente (novo substitui antigo).
+  const handlePeerPing = useCallback(
+    (p: {
+      peerId: string;
+      initial: string;
+      latitude: number;
+      longitude: number;
+      createdAt: number;
+    }) => {
+      useComboioPingStore.getState().setPing(p);
+    },
+    [],
+  );
+
+  // F34.2.1 — Admin remoto designou sucessor. Atualiza store local pra
+  // que o piloto LOCAL veja a ⭐ no peer indicado. Ignora a designacao
+  // se o sucessor escolhido nao for um peer conhecido (defensivo).
+  const handleAdminDesignate = useCallback(
+    (p: { from: string; successorPeerId: string; timestamp: number }) => {
+      // Em V2 (cascata FIFO real), verificariamos que `from` e o admin
+      // atual via store. Por enquanto aceitamos qualquer designacao —
+      // o brainstorm assume um unico admin por vez no mesh.
+      const known = useVoiceGroupStore.getState().participants.some(
+        (peer) => peer.id === p.successorPeerId,
+      );
+      if (!known && p.successorPeerId.length > 0) return;
+      useVoiceGroupStore.getState().setSuccessorPeerId(p.successorPeerId || null);
+    },
+    [],
+  );
+
+  // F34.2.1 — Handoff de admin. Se `to` for o nosso peer id (= nosso nome
+  // ja foi registrado pelo broker), viramos admin local. Caso contrario,
+  // so registramos quem e o novo admin pra atualizar UI futura.
+  // Nota: V1 da F34.2 nao tracka adminPeerId no store remoto — so o local
+  // isLocalAdmin. Isso fica como F34.2.2 quando o broker expor self peer id.
+  const handleAdminHandoff = useCallback(
+    (_p: { from: string; to: string; timestamp: number }) => {
+      // No-op em V1 — full implementation depende de selfPeerId disponivel
+      // no store, que e mudanca grande no fluxo de signaling. Por ora, o
+      // emissor (admin saindo) ja seta isLocalAdmin=false via leaveComboio,
+      // e o destinatario fica esperando a feature completar.
+    },
+    [],
+  );
+
   // 3-second GPS broadcast loop. Runs as long as a comboio is active AND
   // there is a valid current position. Survives navigation between
   // ComboioScreen and HomeScreen because this component lives at the App
@@ -231,6 +292,9 @@ export const VoiceSessionMount: React.FC = () => {
         onReadyToClose={handleReadyToClose}
         onError={handleError}
         onPeerPosition={handlePeerPosition}
+        onPeerPing={handlePeerPing}
+        onAdminDesignate={handleAdminDesignate}
+        onAdminHandoff={handleAdminHandoff}
       />
     </View>
   );

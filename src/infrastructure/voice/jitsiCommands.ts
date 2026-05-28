@@ -10,7 +10,18 @@ export type JitsiCommand =
       longitude: number;
       heading?: number | null;
       speed?: number | null;
-    };
+    }
+  // F34.5.1 — Ping de localizacao
+  | {
+      kind: 'sendPing';
+      latitude: number;
+      longitude: number;
+      initial: string;
+    }
+  // F34.2.1 — Admin propaga sucessor escolhido
+  | { kind: 'sendAdminDesignate'; successorId: string }
+  // F34.2.1 — Admin transfere admin pra outro peer (ou anuncia saida)
+  | { kind: 'sendAdminHandoff'; toId: string };
 
 /**
  * Build a JS snippet to be passed to WebView.injectJavaScript().
@@ -82,6 +93,42 @@ export function buildJitsiInjectionScript(cmd: JitsiCommand): string {
           hd +
           ',' +
           sp +
+          '); }',
+      );
+    }
+
+    case 'sendPing': {
+      const lat = serializeNum(cmd.latitude);
+      const lng = serializeNum(cmd.longitude);
+      // Escape inicial pra string segura — uma letra simples mas defense
+      // contra inputs como '"; alert(1);//' que sao improvaveis mas o
+      // boundary serialise-then-eval merece cuidado.
+      const ini = JSON.stringify(cmd.initial.slice(0, 4));
+      return wrap(
+        'if (typeof window.bwSendPing === "function") { window.bwSendPing(' +
+          lat +
+          ',' +
+          lng +
+          ',' +
+          ini +
+          '); }',
+      );
+    }
+
+    case 'sendAdminDesignate': {
+      const successor = JSON.stringify(String(cmd.successorId));
+      return wrap(
+        'if (typeof window.bwSendAdminDesignate === "function") { window.bwSendAdminDesignate(' +
+          successor +
+          '); }',
+      );
+    }
+
+    case 'sendAdminHandoff': {
+      const to = JSON.stringify(String(cmd.toId));
+      return wrap(
+        'if (typeof window.bwSendAdminHandoff === "function") { window.bwSendAdminHandoff(' +
+          to +
           '); }',
       );
     }

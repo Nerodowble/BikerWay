@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -116,6 +117,27 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
   // F30: toggles locais — ocultar pins dos peers e mutar audio recebido.
   const peerPinsHidden = useVoiceGroupStore((s) => s.peerPinsHidden);
   const incomingAudioMuted = useVoiceGroupStore((s) => s.incomingAudioMuted);
+  // F34.2 — Admin local + sucessor escolhido (V1 local-only).
+  const isLocalAdmin = useVoiceGroupStore((s) => s.isLocalAdmin);
+  const successorPeerId = useVoiceGroupStore((s) => s.successorPeerId);
+  const setSuccessorPeerId = useVoiceGroupStore((s) => s.setSuccessorPeerId);
+  const handlePickSuccessor = useCallback(
+    (peerId: string) => {
+      // Toggle: tocar no mesmo peer 2x desmarca.
+      const nextSuccessor = successorPeerId === peerId ? null : peerId;
+      setSuccessorPeerId(nextSuccessor);
+      // F34.2.1 — Propaga via PeerJS pra todos os peers do comboio
+      // (broadcast em best-effort; falha de transport nao reverte o
+      // estado local).
+      try {
+        const ctrl = getVoiceController();
+        ctrl?.sendAdminDesignate(nextSuccessor ?? '');
+      } catch {
+        // best-effort
+      }
+    },
+    [successorPeerId, setSuccessorPeerId],
+  );
 
   const createComboio = useVoiceGroupStore((s) => s.createComboio);
   const joinComboio = useVoiceGroupStore((s) => s.joinComboio);
@@ -504,6 +526,8 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
           ]}
         />
         <Text style={styles.participantName} numberOfLines={1}>
+          {/* F34.2 — Coroa pra criador do comboio (admin local). */}
+          {isLocalAdmin ? '👑 ' : ''}
           {displayName || 'Piloto'}
           <Text style={styles.localUserSuffix}> (você)</Text>
         </Text>
@@ -516,6 +540,9 @@ export const ComboioScreen: React.FC<Props> = ({ navigation }) => {
         participants={participants}
         dominantSpeakerId={dominantSpeakerId}
         status={status}
+        isLocalAdmin={isLocalAdmin}
+        successorPeerId={successorPeerId}
+        onPickSuccessor={handlePickSuccessor}
       />
     </>
   );
@@ -566,12 +593,20 @@ interface ParticipantsListProps {
   participants: VoiceParticipant[];
   dominantSpeakerId: string | null;
   status: VoiceConnectionStatus;
+  /** F34.2 — Se TRUE, mostra estrela ao lado de cada peer pra o admin
+   *  poder escolher seu sucessor. */
+  isLocalAdmin: boolean;
+  successorPeerId: string | null;
+  onPickSuccessor: (peerId: string) => void;
 }
 
 const ParticipantsList: React.FC<ParticipantsListProps> = ({
   participants,
   dominantSpeakerId,
   status,
+  isLocalAdmin,
+  successorPeerId,
+  onPickSuccessor,
 }) => {
   const isReconnecting = status === 'reconnecting';
 
@@ -583,6 +618,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
       else if (item.isAudioMuted) dotColor = colors.danger;
       const isTalking = item.id === dominantSpeakerId && !item.isAudioMuted;
       const tagColor = colorForParticipant(item.id);
+      const isSuccessor = successorPeerId === item.id;
       return (
         <View key={item.id} style={styles.participantRow}>
           <View style={[styles.participantDot, { backgroundColor: dotColor }]} />
@@ -590,6 +626,8 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
             style={[styles.participantColorTag, { backgroundColor: tagColor }]}
           />
           <Text style={styles.participantName} numberOfLines={1}>
+            {/* F34.2 — Estrela dourada pro sucessor escolhido pelo admin. */}
+            {isSuccessor ? '⭐ ' : ''}
             {item.displayName || 'Piloto'}
           </Text>
           {item.isAudioMuted ? (
@@ -598,10 +636,39 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
           {isTalking ? (
             <Text style={styles.participantTalking}>Falando...</Text>
           ) : null}
+          {/* F34.2 — Botao "tornar sucessor" so aparece pro admin local. */}
+          {isLocalAdmin ? (
+            <Pressable
+              onPress={() => onPickSuccessor(item.id)}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isSuccessor
+                  ? `Tirar ${item.displayName ?? 'piloto'} como próximo líder`
+                  : `Definir ${item.displayName ?? 'piloto'} como próximo líder`
+              }
+              accessibilityState={{ selected: isSuccessor }}
+              testID={`btn-pick-successor-${item.id}`}
+              style={({ pressed }) => [
+                styles.successorBtn,
+                isSuccessor ? styles.successorBtnActive : null,
+                pressed ? styles.successorBtnPressed : null,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.successorBtnLabel,
+                  isSuccessor ? styles.successorBtnLabelActive : null,
+                ]}
+              >
+                {isSuccessor ? '★' : '☆'}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       );
     },
-    [dominantSpeakerId, isReconnecting],
+    [dominantSpeakerId, isReconnecting, isLocalAdmin, successorPeerId, onPickSuccessor],
   );
 
   if (participants.length === 0) {
@@ -647,6 +714,33 @@ const styles = StyleSheet.create({
   debugRow: { marginTop: spacing.md },
   localUserSuffix: { color: colors.textMuted, fontSize: typography.sizes.sm, fontWeight: '500' },
   participantMuted: { color: colors.danger, fontSize: typography.sizes.sm, fontWeight: '700', marginLeft: spacing.sm },
+  // F34.2 — Botao "tornar sucessor" so visivel pro admin local
+  successorBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
+  successorBtnActive: {
+    backgroundColor: 'rgba(255,204,0,0.18)',
+    borderColor: colors.warning,
+  },
+  successorBtnPressed: {
+    opacity: 0.6,
+  },
+  successorBtnLabel: {
+    color: colors.textMuted,
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  successorBtnLabelActive: {
+    color: colors.warning,
+  },
   participantColorTag: { width: 10, height: 18, borderRadius: 3, marginRight: spacing.sm, borderWidth: 1, borderColor: 'rgba(0,0,0,0.4)' },
   controlsRow: { flexDirection: 'row', alignItems: 'stretch', marginVertical: spacing.md },
   controlCell: { flex: 1 },

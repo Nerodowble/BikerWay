@@ -15,6 +15,7 @@ import MapView, { Polyline, UrlTile } from 'react-native-maps';
 // `mkdir` manual.
 import * as FileSystem from 'expo-file-system/legacy';
 import type {
+  LongPressEvent,
   MapPressEvent,
   Region,
 } from 'react-native-maps';
@@ -41,6 +42,7 @@ import { WeatherSegmentPolyline } from './WeatherSegmentPolyline';
 import { PoiMarker } from './PoiMarker';
 import { FuelWaypointMarker } from './FuelWaypointMarker';
 import { PeerMemberMarker } from './PeerMemberMarker';
+import { PingMarker } from './PingMarker';
 import { PeerLabelsOverlay } from './PeerLabelsOverlay';
 import type { ComboioPeerPosition } from '@/state/voiceGroupStore';
 import { CAMERA_CONFIG, type CameraMode } from './cameraConfig';
@@ -84,6 +86,16 @@ export interface BikerMapViewProps {
    * store); this prop just paints whatever it receives.
    */
   peerMembers?: ComboioPeerPosition[];
+  /** F34.2 — Peer id do admin (recebe coroa 👑 acima do pin). */
+  adminPeerId?: string | null;
+  /** F34.2 — Peer id do sucessor (recebe estrela ⭐ acima do pin). */
+  successorPeerId?: string | null;
+  /** F34.5 — Lista de pings ativos pra renderizar no mapa. Cada um vira
+   *  PingMarker pulsante laranja com a inicial centralizada. */
+  pings?: ReadonlyArray<import('@/domains/comboio/ping').ComboioPing>;
+  /** F34.5 — Disparado quando o piloto faz long-press num ponto do mapa.
+   *  HomeScreen ouve isso pra criar um ping naquela coordenada. */
+  onLongPressMap?: (coord: { latitude: number; longitude: number }) => void;
   /**
    * Optional list of OSRM route alternatives to display simultaneously
    * (Google Maps / Waze style picker). Each entry carries its own id (used
@@ -151,6 +163,13 @@ export interface BikerMapHandle {
    * userPosition is null.
    */
   centerOnUser: () => void;
+  /**
+   * F34.8 — Auto-zoom enquadrando TODOS os peers + admin + minha propria
+   * posicao numa bounding box. Util pro botao "🔍 PELOTÃO" durante comboio
+   * pra ver o grupo inteiro de uma vez. No-op se nao ha pelo menos 1 peer
+   * + minha posicao.
+   */
+  fitToPeerGroup: () => void;
 }
 
 // F36.3 — Path do cache de tiles em disco. Calculado uma unica vez em
@@ -209,6 +228,10 @@ export const BikerMapView = forwardRef<BikerMapHandle, BikerMapViewProps>(
       onPoiPress,
       fuelWaypoint,
       peerMembers,
+      adminPeerId,
+      successorPeerId,
+      pings,
+      onLongPressMap,
       routeAlternatives,
       selectedAlternativeIndex,
       weatherSegments,
@@ -323,8 +346,31 @@ export const BikerMapView = forwardRef<BikerMapHandle, BikerMapViewProps>(
             { duration: 700 },
           );
         },
+        fitToPeerGroup: () => {
+          if (!mapRef.current) return;
+          // F34.8 — Reune coords de peers + minha posicao + admin se
+          // populated. Fit-to-coordinates do MapView fazendo o calculo
+          // do bbox + padding por si proprio.
+          const coords: Array<{ latitude: number; longitude: number }> = [];
+          if (userPosition) {
+            coords.push({
+              latitude: userPosition.latitude,
+              longitude: userPosition.longitude,
+            });
+          }
+          if (peerMembers) {
+            for (const p of peerMembers) {
+              coords.push({ latitude: p.latitude, longitude: p.longitude });
+            }
+          }
+          if (coords.length < 2) return; // precisa de pelo menos 2 pontos
+          mapRef.current.fitToCoordinates(coords, {
+            edgePadding: { top: 140, right: 80, bottom: 260, left: 80 },
+            animated: true,
+          });
+        },
       }),
-      [userPosition, mode],
+      [userPosition, mode, peerMembers],
     );
 
     const handlePress = useCallback(
@@ -336,6 +382,15 @@ export const BikerMapView = forwardRef<BikerMapHandle, BikerMapViewProps>(
         onMapPress({ latitude, longitude });
       },
       [onMapPress],
+    );
+
+    const handleLongPress = useCallback(
+      (event: LongPressEvent) => {
+        if (!onLongPressMap) return;
+        const { latitude, longitude } = event.nativeEvent.coordinate;
+        onLongPressMap({ latitude, longitude });
+      },
+      [onLongPressMap],
     );
 
     return (
@@ -354,6 +409,7 @@ export const BikerMapView = forwardRef<BikerMapHandle, BikerMapViewProps>(
           loadingBackgroundColor={colors.background}
           loadingIndicatorColor={colors.accent}
           onPress={handlePress}
+          onLongPress={handleLongPress}
           onRegionChange={handleRegionChange}
         >
           <UrlTile
@@ -461,6 +517,12 @@ export const BikerMapView = forwardRef<BikerMapHandle, BikerMapViewProps>(
               ))
             : null}
 
+          {/* F34.5 — Pings pulsantes laranja. zIndex 900 acima dos peer
+              markers (700) e tile (-1) pra ficar bem visivel. */}
+          {pings && pings.length > 0
+            ? pings.map((p) => <PingMarker key={p.peerId} ping={p} />)
+            : null}
+
           {fuelWaypoint ? (
             <FuelWaypointMarker waypoint={fuelWaypoint} />
           ) : null}
@@ -493,6 +555,8 @@ export const BikerMapView = forwardRef<BikerMapHandle, BikerMapViewProps>(
             mapRef={mapRef}
             peerMembers={peerMembers}
             regionTick={regionTick}
+            adminPeerId={adminPeerId ?? null}
+            successorPeerId={successorPeerId ?? null}
           />
         ) : null}
 
